@@ -16,7 +16,8 @@ import {
 import { verifyProof } from "./proof.ts";
 
 const controlParameters = Type.Object({
-  action: StringEnum(["lock", "override", "status", "gate"] as const),
+  action: StringEnum(["arm", "lock", "override", "status", "gate"] as const),
+  northStar: Type.Optional(Type.String({ description: "What the loop is for, in one line. Required for arm." })),
   goal: Type.Optional(Type.String({ description: "Falsifiable end state. Required for lock." })),
   gate: Type.Optional(Type.String({ description: "Binary stop condition. Required for lock." })),
   scope: Type.Optional(Type.Array(Type.String(), { description: "Absolute paths in play. Required for lock." })),
@@ -45,25 +46,55 @@ function recordSessionAudit(ctx: ExtensionContext, entry: Record<string, unknown
   recordAudit({ sessionId: sessionId(ctx), ...entry });
 }
 
+function onRamp(northStar: string, armedBy: "the user, by slash command" | "you, by tool call"): string {
+  return [
+    `Terraloop is now ARMED for this Pi session, by ${armedBy}.`,
+    northStar ? `North star: ${northStar}` : "No north star was supplied.",
+    "",
+    "Follow the terraloop protocol on-ramp:",
+    "1. Read the terraloop skill if it is not already loaded.",
+    "2. Draft the contract: Goal (falsifiable), Gate (binary), Scope (absolute paths), Proof (exact runnable command).",
+    "3. Echo it back in about five lines and wait for a one-word go.",
+    "4. After the go, call terraloop_control action=lock, create the driver loop, then spawn children.",
+    "",
+    "The gate blocks terrarium spawns and inline edit/write/mutating-bash in this session until the contract is locked and a driver exists. Do not work around it; satisfy it.",
+    "Only the user can leave terraloop mode, with /terraloop-off.",
+  ].join("\n");
+}
+
 export default function terraloopMode(pi: ExtensionAPI) {
   pi.registerTool({
     name: "terraloop_control",
     label: "Terraloop",
     description:
-      "Operate inside an armed terraloop. lock = record goal/gate/scope/proof after the user approves the contract. gate = mark the stop gate reached. override = permit a bounded number of inline mutations with a recorded reason. status = show current phase. Only the user can arm or release terraloop, via /terraloop and /terraloop-off.",
-    promptSnippet: "Lock the contract, mark the gate, or request an override inside an armed terraloop",
+      "Run a terraloop: a bounded orchestration loop with a locked contract, a recurring driver, delegated children, and a verified stop gate. arm = enter terraloop mode with a northStar when the user asks for a loop. lock = record goal/gate/scope/proof after the user approves the contract. override = permit a bounded number of inline mutations with a recorded reason. gate = verify the stop condition by running the contract's proof. status = show current phase. Only the user can leave terraloop mode, with /terraloop-off.",
+    promptSnippet: "Arm a terraloop, lock its contract, request an override, or verify its stop gate",
     promptGuidelines: [
+      "Call terraloop_control action=arm with a northStar when the user asks for a terraloop, a driver loop, or a long autonomous run that should stop at a stated condition.",
       "Call terraloop_control action=lock with goal, gate, scope, and proof after the user approves the contract, before spawning any terrarium child.",
       "Call terraloop_control action=override with a reason when terraloop blocks an inline action that is genuinely required.",
-      "Do not attempt to arm or release terraloop; only the user can, with /terraloop and /terraloop-off.",
+      "Do not try to leave terraloop mode or clear its state; only the user can, with /terraloop-off.",
     ],
     parameters: controlParameters,
     async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
       const state = readSessionState(ctx);
       if (params.action === "status") return text(describeState(state));
 
+      if (params.action === "arm") {
+        const northStar = (params.northStar ?? "").trim();
+        if (northStar.length < 8) {
+          return text("arm rejected: northStar is required and must say what the loop is for in one line.");
+        }
+        if (state.phase !== "off") {
+          return text(`arm rejected: terraloop is already ${state.phase} in this session.\n${describeState(state)}`);
+        }
+        const next = writeSessionState(ctx, { ...initialState(), phase: "armed" });
+        recordSessionAudit(ctx, { event: "arm", via: "agent-tool", northStar });
+        return text(`${describeState(next)}\n\n${onRamp(northStar, "you, by tool call")}`);
+      }
+
       if (state.phase === "off") {
-        return text("terraloop is off. Only the user can arm it, with /terraloop. Do not attempt to arm it yourself.");
+        return text("terraloop is off. Arm it first with terraloop_control action=arm and a northStar, or ask the user to run /terraloop.");
       }
 
       if (params.action === "lock") {
@@ -118,23 +149,9 @@ export default function terraloopMode(pi: ExtensionAPI) {
         return;
       }
       writeSessionState(ctx, { ...initialState(), phase: "armed" });
-      recordSessionAudit(ctx, { event: "arm", via: "slash-command", northStar: args || null });
-      const northStar = args.trim();
+      recordSessionAudit(ctx, { event: "arm", via: "slash-command", northStar: args.trim() || null });
       ctx.ui.notify("terraloop armed for this session — other Pi sessions are unaffected", "info");
-      pi.sendUserMessage(
-        [
-          "Terraloop is now ARMED by explicit slash command for this Pi session.",
-          northStar ? `North star: ${northStar}` : "No north star was supplied with the command.",
-          "",
-          "Follow the terraloop skill on-ramp:",
-          "1. Read the terraloop protocol if it is not already loaded.",
-          "2. Draft the contract: Goal (falsifiable), Gate (binary), Scope (absolute paths), Proof (exact command or receipt).",
-          "3. Echo it back in about five lines and wait for a one-word go.",
-          "4. After the go, call terraloop_control action=lock, then create the driver loop, then spawn children.",
-          "",
-          "The gate blocks terrarium spawns and inline edit/write/mutating-bash in this session until the contract is locked. Do not try to work around it; satisfy it.",
-        ].join("\n"),
-      );
+      pi.sendUserMessage(onRamp(args.trim(), "the user, by slash command"));
     },
   });
 
@@ -167,7 +184,7 @@ export default function terraloopMode(pi: ExtensionAPI) {
       "- driving: you orchestrate and verify. Inline edit/write/mutating-bash is blocked. Spawn bounded children instead.",
       "- gated: new spawns are blocked until the driver loop is deleted.",
       "Use terraloop_control action=override with a reason when an inline action is genuinely required.",
-      "You cannot arm or release this mode. Only the user can, with /terraloop and /terraloop-off.",
+      "You cannot leave this mode or clear its state. Only the user can, with /terraloop-off.",
     ].join("\n");
     return { systemPrompt: `${event.systemPrompt}\n\n${rules}` };
   });

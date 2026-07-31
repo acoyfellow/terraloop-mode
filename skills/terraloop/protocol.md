@@ -49,10 +49,10 @@ the children, `terrarium_read`/`terrarium_cancel` as needed, verifies, spawns th
 next `terrarium_spawn`(_batch), and on the stop gate calls `loops_task delete`.
 Do not sleep or poll inline; ride the terrarium completion callbacks between ticks.
 
-3. **`terraloop_control`** — the gate's own tool, for operating inside an armed
-   loop: `lock` the contract, `override` a block with a recorded reason, `gate`
-   when the stop condition is met, `status` to read the current phase. It cannot
-   arm or release the mode; the user does that with `/terraloop` and
+3. **`terraloop_control`** — the gate's own tool: `arm` the mode with a north star
+   when the user asks for a loop, `lock` the contract, `override` a block with a
+   recorded reason, `gate` when the stop condition is met, `status` to read the
+   current phase. It cannot release the mode; only the user can, with
    `/terraloop-off`.
 
 ## Core rules

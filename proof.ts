@@ -16,12 +16,21 @@ const defaultRunner: CommandRunner = (command) => {
 
 const commandStart = /^(bun|npx|npm|pnpm|yarn|node|curl|grep|cat|sh|bash|python3?|cargo|go|make)\b/;
 const proseMarkers = /(>=|<=|\bpass\b|\bfail\b|\bmust\b|\bshould\b|\bshows\b|\bvia\b|==)/i;
+const leadingDirectoryChange = /^cd\s+(?:'[^']*'|"[^"]*"|[^\s&|;]+)\s*&&\s*/;
+
+function withoutDirectoryChanges(line: string): string {
+  let remainder = line;
+  while (leadingDirectoryChange.test(remainder)) {
+    remainder = remainder.replace(leadingDirectoryChange, "");
+  }
+  return remainder;
+}
 
 export function firstRunnableCommand(proof: string): string | null {
   for (const rawLine of proof.split(/[;\n]/)) {
     const line = rawLine.trim();
     if (line.length === 0) continue;
-    if (!commandStart.test(line)) continue;
+    if (!commandStart.test(withoutDirectoryChanges(line))) continue;
     if (proseMarkers.test(line)) return null;
     return line;
   }

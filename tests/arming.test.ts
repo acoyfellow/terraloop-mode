@@ -4,23 +4,33 @@ import { join } from "node:path";
 
 const extensionSource = readFileSync(join(import.meta.dir, "..", "extension.ts"), "utf8");
 
-test("the LLM-callable tool cannot arm or release terraloop", () => {
+test("the agent-callable tool can arm but never release", () => {
   const actionEnum = extensionSource.match(/action: StringEnum\(\[([^\]]*)\]/)?.[1] ?? "";
-  expect(actionEnum).not.toContain("arm");
+  expect(actionEnum).toContain("arm");
   expect(actionEnum).not.toContain("release");
+  expect(actionEnum).not.toContain("off");
   expect(actionEnum).toContain("lock");
   expect(actionEnum).toContain("override");
   expect(actionEnum).toContain("gate");
 });
 
-test("arming and releasing are registered as user slash commands", () => {
+test("arming requires a stated north star", () => {
+  expect(extensionSource).toContain("arm rejected: northStar is required");
+});
+
+test("arming refuses when a loop is already live", () => {
+  expect(extensionSource).toContain("arm rejected: terraloop is already");
+});
+
+test("releasing stays a user slash command", () => {
   expect(extensionSource).toContain('pi.registerCommand("terraloop"');
   expect(extensionSource).toContain('pi.registerCommand("terraloop-off"');
   expect(extensionSource).toContain('pi.registerCommand("terraloop-status"');
 });
 
-test("the tool refuses to operate while terraloop is off", () => {
-  expect(extensionSource).toContain('return text("terraloop is off. Only the user can arm it, with /terraloop.');
+test("both arming paths record how the loop was armed", () => {
+  expect(extensionSource).toContain('via: "agent-tool"');
+  expect(extensionSource).toContain('via: "slash-command"');
 });
 
 test("no prompt-intent regex arms the gate", () => {

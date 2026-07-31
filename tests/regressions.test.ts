@@ -96,3 +96,21 @@ test("delegation and inline counters start at zero and are tracked separately", 
   expect(fresh.inlineMutations).toBe(0);
   expect(fresh.overrideGrantsUsed).toBe(0);
 });
+
+test("a proof that changes directory first is runnable, and keeps the cd", () => {
+  const proof = "cd /Users/jcoeyman/cloudflare/terraloop-mode && bun run check";
+  expect(firstRunnableCommand(proof)).toBe(proof);
+});
+
+test("quoted and chained directory changes are still runnable", () => {
+  expect(firstRunnableCommand('cd "/tmp/a b" && npm test')).toBe('cd "/tmp/a b" && npm test');
+  expect(firstRunnableCommand("cd /tmp && cd sub && make")).toBe("cd /tmp && cd sub && make");
+});
+
+test("a bare directory change proves nothing", () => {
+  expect(firstRunnableCommand("cd /tmp/project")).toBeNull();
+});
+
+test("prose after a directory change is still refused", () => {
+  expect(firstRunnableCommand("cd /tmp && bun test >= 77 pass")).toBeNull();
+});

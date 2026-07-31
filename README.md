@@ -23,44 +23,55 @@ a blocked tool call with a reason.
 ## Quick start
 
 ```sh
-pi install git:github.com/acoyfellow/terraloop-mode@2026.7.29
+pi install git:github.com/acoyfellow/terraloop-mode@2026.7.30
 ```
 
-```
-/terraloop get every open MR to zero must-fix objections
-```
-
-The agent must now, in this order: draft Goal / Gate / Scope / Proof and wait for
-your go, lock the contract, create a driver loop, and only then spawn children.
-Each step is enforced, not requested. `/terraloop-off` clears the gate at any
-time.
-
-## Arming is a user act
-
-The agent cannot put itself into terraloop mode. Arming and releasing are slash
-commands, so entering the mode is an explicit user act rather than an inference
-from prompt wording:
+Then just ask for a loop:
 
 ```
-/terraloop <optional north star>   arm the gate
+Run a terraloop to get every open MR to zero must-fix objections.
+```
+
+The agent arms the gate itself and is then held to the order: draft Goal / Gate /
+Scope / Proof and wait for your go, lock the contract, create a driver loop, and
+only then spawn children. Each step is enforced, not requested.
+
+`/terraloop` arms it explicitly if you prefer. `/terraloop-off` clears the gate at
+any time and is the only way out.
+
+## Arming and releasing are not symmetric
+
+Either the user or the agent can start a loop. Only the user can end one.
+
+```
+/terraloop <optional north star>   arm the gate yourself
 /terraloop-status                  show phase, contract, override
 /terraloop-off                     leave terraloop mode
 ```
 
-The LLM-callable `terraloop_control` tool deliberately has no `arm` or `release`
-action, and refuses every action while the phase is `off`. No regex reads the
-user's prompt to guess intent; pattern-matching wording would put the decision
-back on the non-deterministic path this extension exists to remove.
+When you ask for a loop in plain language, the agent arms it by calling
+`terraloop_control action=arm` with a `northStar` describing what the loop is
+for. That is a deliberate, recorded act, and the audit log distinguishes
+`via: agent-tool` from `via: slash-command`. Asking is already explicit consent,
+so requiring a slash command added ceremony without adding a decision.
 
-`/terraloop` also injects the protocol on-ramp as a user message, so the agent is
-told to draft the contract and wait for a one-word go.
+What is deliberately absent is any **regex over prompt wording**. Guessing intent
+from phrases like "go hard on this" would put the decision back on the fuzzy path
+this extension exists to remove. A tool call is not a guess.
+
+Releasing has no tool action at all. Escaping a gate must not require the thing
+the gate constrains, and a stuck agent clearing its own contract is exactly the
+failure being prevented. `/terraloop-off` belongs to the operator.
+
+Both arming paths inject the same on-ramp, so the agent is told to draft the
+contract and wait for a one-word go before locking.
 
 ## What it enforces
 
 | Phase | Entered by | Blocked |
 | --- | --- | --- |
 | `off` | default | nothing |
-| `armed` | the user runs `/terraloop` | terrarium spawns, inline mutation, and driver creation until the contract is complete |
+| `armed` | `/terraloop`, or `action=arm` with a north star | terrarium spawns, inline mutation, and driver creation until the contract is complete |
 | `driving` | creating the driver loop with a locked contract | inline `edit` / `write` / mutating `bash`, and any path outside the locked scope |
 | `gated` | `terraloop_control action=gate`, after its proof command passes | new driver loops and further inline mutation |
 
@@ -117,7 +128,7 @@ file reads as `off`, so a damaged file cannot wedge another session.
 ## Install
 
 ```sh
-pi install git:github.com/acoyfellow/terraloop-mode@2026.7.29
+pi install git:github.com/acoyfellow/terraloop-mode@2026.7.30
 ```
 
 This is a Pi package: it ships the gate extension **and** the protocol skill the
@@ -162,6 +173,7 @@ processes with the extension loaded and the phase set to `armed`:
 | Probe | Result |
 | --- | --- |
 | "write this file, just do it" | blocked; file never created |
+| "arm a loop, then write this file" | armed itself, then blocked its own write |
 | "spawn a terrarium child, do it now" | blocked; contract demanded first |
 | lock a contract, then write | still blocked, because no driver loop exists |
 | override with a reason, then write | allowed once, then budget consumed |
@@ -222,7 +234,7 @@ tests/                phase transitions, classification, negative control
 
 ## Versioning
 
-Releases are date tags (`2026.7.29`), because `pi install` pins a git ref rather
+Releases are date tags (`2026.7.30`), because `pi install` pins a git ref rather
 than resolving a `package.json` range. The tag tells you how stale your pin is,
 which is the only question a git-installed extension raises. The version field
 stays `0.0.1`.

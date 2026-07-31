@@ -1,6 +1,6 @@
 ---
 name: terraloop
-description: Operate inside an armed terraloop — a driver loop that advances bounded work toward a goal by spawning child agents, verifying their output, and iterating to a hard stop gate. Load this when the terraloop gate is armed (phase armed, driving, or gated), when a tool call is blocked with a terraloop reason, or when the user asks how to satisfy the gate. The user arms terraloop with /terraloop; do not attempt to arm it yourself. Also load when a project file points at its own loop contract and says to follow it.
+description: Run or operate inside a terraloop — a driver loop that advances bounded work toward a goal by spawning child agents, verifying their output, and iterating to a hard stop gate. Load this when the user asks for a terraloop, a driver loop, or a long autonomous run that stops at a stated condition; when the gate is already armed (phase armed, driving, or gated); when a tool call is blocked with a terraloop reason; or when a project file points at its own loop contract and says to follow it.
 metadata:
   short-description: Lock a contract, run a driver, and verify to the terraloop stop gate
 ---
@@ -30,12 +30,21 @@ around it.
 Read-only tools are never blocked. Check phase any time with
 `terraloop_control action=status`.
 
-## The user arms it, not you
+## Starting one
 
-Arming and releasing are the user's slash commands: `/terraloop`,
-`/terraloop-off`, `/terraloop-status`. `terraloop_control` has no `arm` or
-`release` action and refuses every action while the phase is `off`. Never claim
-you are starting a terraloop unless the phase is already armed.
+When the user asks for a terraloop, arm it yourself:
+
+```
+terraloop_control action=arm northStar="<what this loop is for, one line>"
+```
+
+The user can also arm it with `/terraloop`. Either way you then owe the contract
+before anything else happens.
+
+You cannot leave terraloop mode or clear its state. Only the user can, with
+`/terraloop-off`. If you are stuck, say so and ask; do not try to unwedge yourself
+by editing state files. Never claim a terraloop is running unless the phase is
+actually armed, driving, or gated.
 
 ## Satisfying each phase
 
