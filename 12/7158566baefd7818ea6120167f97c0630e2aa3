@@ -1,0 +1,19 @@
+tests/regressions.test.ts
+  s_085e890f02f378::t_bd68c36f4559a9 99-116
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "127158566baefd7818ea6120167f97c0630e2aa3",
+  "prompts": {},
+  "sessions": {
+    "s_085e890f02f378": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "019fa933-befa-7ea6-bf59-fa48b7100a50",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Jordan Coeyman <jcoeyman@cloudflare.com>"
+    }
+  }
+}
