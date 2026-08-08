@@ -28,10 +28,18 @@ tool call rather than left to the agent's discretion.
    - `terrarium_cancel` — reap a stalled/hung/runaway child (SIGTERM its group).
    - `terrarium_callbacks` / `terrarium_group` / `terrarium_doctor` — durable
      callback plumbing, group roll-ups, and diagnostics.
-   Children are spawned with an explicit `agent` (e.g. `pi -p --no-session`, or
-   `pi -ne -p --no-session` when project-local extensions would collide),
+   Children are spawned with an explicit `agent` (e.g. `pi -p --no-session`),
    `readOnly` for digs, `background`, `timeoutMs`, `needsAttentionAfterMs`,
    `maxDepth`, and a `channel`.
+
+   Do not add `-ne` (`--no-extensions`) when the model provider comes from an
+   extension. `-ne` disables extension discovery, so the provider is no longer
+   registered and every child dies in about one second with
+   `Unknown provider "<name>"`. Example: `opencode.cloudflare.dev` is supplied
+   by the `opencode-cloudflare` extension, so `pi -ne -p --provider
+   opencode.cloudflare.dev` always fails. Use plain `pi -p --no-session`. If
+   project-local extensions truly collide, disable the specific extension
+   instead of all of them.
 
 2. **`/loop` pi extension (`loops_task`)** — the recurring DRIVER. It re-injects
    a prompt on an interval while the session is open and idle, so the parent
