@@ -114,3 +114,12 @@ test("a bare directory change proves nothing", () => {
 test("prose after a directory change is still refused", () => {
   expect(firstRunnableCommand("cd /tmp && bun test >= 77 pass")).toBeNull();
 });
+
+test("the default runner executes without a Bun global, so gate works under the Pi Node runtime", () => {
+  const passing = verifyProof('node -e "process.exit(0)"');
+  expect(passing.verified).toBe(true);
+
+  const failing = verifyProof('node -e "process.exit(3)"');
+  expect(failing.verified).toBe(false);
+  if (!failing.verified && failing.command !== null) expect(failing.exitCode).toBe(3);
+});

@@ -1,3 +1,5 @@
+import { spawnSync } from "node:child_process";
+
 export type ProofOutcome =
   | { verified: true; command: string; output: string }
   | { verified: false; command: string; exitCode: number; output: string }
@@ -6,11 +8,11 @@ export type ProofOutcome =
 export type CommandRunner = (command: string) => { exitCode: number; stdout: string; stderr: string };
 
 const defaultRunner: CommandRunner = (command) => {
-  const result = Bun.spawnSync({ cmd: ["/bin/sh", "-c", command], stdout: "pipe", stderr: "pipe" });
+  const result = spawnSync("/bin/sh", ["-c", command], { encoding: "buffer" });
   return {
-    exitCode: result.exitCode,
-    stdout: Buffer.from(result.stdout).toString(),
-    stderr: Buffer.from(result.stderr).toString(),
+    exitCode: result.status ?? 1,
+    stdout: Buffer.from(result.stdout ?? []).toString(),
+    stderr: Buffer.from(result.stderr ?? []).toString(),
   };
 };
 
