@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { classifyTool, evaluate, consumeOverride, pathIsInScope } from "../gate.ts";
+import { classifyTool, evaluate, consumeOverride, outOfScopeSpawnPath, pathIsInScope, spawnTargetPaths } from "../gate.ts";
 import { contractIsComplete, initialState, readState, statePathForSession, writeState, type LoopState } from "../state.ts";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -99,6 +99,14 @@ test("override is consumed and expires", () => {
 test("scope containment is enforced by prefix", () => {
   expect(pathIsInScope("/repo/src/index.ts", ["/repo/src"])).toBe(true);
   expect(pathIsInScope("/repo/secrets/.env", ["/repo/src"])).toBe(false);
+});
+
+test("a spawn cwd outside locked scope is refused", () => {
+  expect(spawnTargetPaths({ cwd: "/repo/src" })).toEqual(["/repo/src"]);
+  expect(spawnTargetPaths({ jobs: [{ cwd: "/repo/src" }, { cwd: "/tmp/other" }] })).toEqual(["/repo/src", "/tmp/other"]);
+  expect(outOfScopeSpawnPath({ cwd: "/repo/src" }, ["/repo/src"])).toBeNull();
+  expect(outOfScopeSpawnPath({ cwd: "/Users/me/.pi/agent/extensions" }, ["/repo/src"])).toBe("/Users/me/.pi/agent/extensions");
+  expect(outOfScopeSpawnPath({ jobs: [{ cwd: "/repo/src/a" }, { cwd: "/secret" }] }, ["/repo/src"])).toBe("/secret");
 });
 
 test("state round-trips through disk and survives a corrupt file", () => {

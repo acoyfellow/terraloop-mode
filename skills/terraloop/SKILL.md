@@ -7,8 +7,9 @@ metadata:
 
 # Terraloop
 
-A **north star** becomes a self-driving loop: a driver (`loops_task`) spawns
-bounded children (`terrarium`), verifies every result, re-steers, and stops at a
+A **north star** becomes a parent-driven loop: the parent does the work, a
+driver (`loops_task`) keeps the session moving, and Terrarium is a lever for a
+named reason — not the default place work happens. The loop stops at a
 falsifiable gate.
 
 The operating rules are in **[protocol.md](./protocol.md)** — read it now and
@@ -24,7 +25,7 @@ around it.
 | --- | --- |
 | `off` | nothing |
 | `armed` | terrarium spawns, inline `edit`/`write`/mutating `bash`, driver creation until the contract is complete |
-| `driving` | inline `edit`/`write`/mutating `bash`; any path outside the locked scope |
+| `driving` | inline `edit`/`write`/mutating `bash` without an override; any parent or child path outside the locked scope, including spawn `cwd` |
 | `gated` | new spawns and new drivers until the driver loop is deleted |
 
 Read-only tools are never blocked. Check phase any time with
@@ -56,7 +57,7 @@ wait for a one-word go**:
 - **Goal** — falsifiable end state ("the endpoint returns 200 with the new
   field", not "make it good").
 - **Gate** — the binary condition that ends the loop.
-- **Scope** — absolute paths in play. Inline writes outside these are blocked.
+- **Scope** — absolute paths in play. Parent writes **and** child `cwd`s outside these are blocked. A child cannot be granted a wider surface than the parent.
 - **Proof** — the exact command, curl, grep, or receipt proving each step.
 
 If any of these is unclear, ask **one tight batch** of questions and stop. Never
@@ -77,16 +78,21 @@ Locking alone does **not** unlock work. The driver loop must exist too.
 Proof, the live child run IDs, and "delete this loop when the gate is met".
 Creating it moves the phase to `driving`.
 
-### 3. `driving` — orchestrate, never do the work inline
+### 3. `driving` — parent works; Terrarium is a lever
 
-Spawn bounded children with `terrarium`, parallel where independent, working
-backward from the goal. Each tick: reap finished children, verify every claim
-yourself, consolidate, advance one step. Ride completion callbacks; never sleep
-or poll inline.
+Do the next cheap in-scope step yourself. Spawn a child only when a lever in
+**[protocol.md](./protocol.md)** is named in the task (parallel, isolate, bound,
+context, or proof). Never spawn a child to edit a path the parent was blocked
+from writing.
 
-Inline mutation is blocked here on purpose. When a child stalls the same way
-twice, the protocol says to do that piece directly — that is what the override is
-for:
+On a completion callback, check that known child with
+`terrarium_status({ runId })`, then `terrarium_read` it, verify every claim
+yourself, consolidate, and advance one step. Do not list recent runs or pass
+`verbose` unless `pid` or `logPath` is required. Ride completion callbacks; never
+sleep or poll inline.
+
+Small parent edits use override. Do not spawn a child to escape a scope or
+override block:
 
 ```
 terraloop_control action=override reason="<12+ chars, why inline is required>" calls=1

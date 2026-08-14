@@ -84,7 +84,7 @@ deadlocking.
 1. No child is spawned before a contract with goal, gate, scope, and proof exists.
 2. No child is spawned without a driver loop, so orchestration cannot happen
    without the recurring driver that reaps and re-steers it.
-3. While driving, deep work is delegated rather than done inline.
+3. While driving, the parent is the default worker. Terrarium is a lever, not the default. A child cannot be granted a wider cwd than the locked scope.
 4. The gate cannot be self-certified. `action=gate` extracts a runnable command
    from the contract's `proof` field and runs it; a non-zero exit refuses the
    gate. An agent cannot simply declare the work finished.

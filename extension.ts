@@ -1,7 +1,7 @@
 import { Type } from "typebox";
 import { StringEnum } from "@earendil-works/pi-ai";
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
-import { classifyTool, consumeOverride, evaluate, pathIsInScope, requestOverride } from "./gate.ts";
+import { classifyTool, consumeOverride, evaluate, outOfScopeSpawnPath, pathIsInScope, requestOverride } from "./gate.ts";
 import {
   contractIsComplete,
   describeState,
@@ -227,6 +227,17 @@ export default function terraloopMode(pi: ExtensionAPI) {
       if (typeof path === "string" && pathIsInScope(path, state.contract.scope) === false) {
         recordSessionAudit(ctx, { event: "blocked", toolName: event.toolName, intent, phase: state.phase, detail: "path outside locked scope" });
         return { block: true, reason: `terraloop scope violation: ${path} is outside the locked scope (${state.contract.scope.join(", ")}).` };
+      }
+    }
+
+    if (intent === "spawn" && state.contract && (state.phase === "driving" || state.phase === "gated")) {
+      const cwd = outOfScopeSpawnPath(event.input, state.contract.scope);
+      if (cwd) {
+        recordSessionAudit(ctx, { event: "blocked", toolName: event.toolName, intent, phase: state.phase, detail: "spawn cwd outside locked scope" });
+        return {
+          block: true,
+          reason: `terraloop scope violation: spawn cwd ${cwd} is outside the locked scope (${state.contract.scope.join(", ")}). A child cannot be granted a wider write surface than the parent.`,
+        };
       }
     }
 

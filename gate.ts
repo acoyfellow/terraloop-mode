@@ -32,6 +32,28 @@ export function pathIsInScope(path: string, scope: readonly string[]): boolean {
   return scope.some((entry) => path.startsWith(entry));
 }
 
+export function spawnTargetPaths(input: unknown): string[] {
+  if (!input || typeof input !== "object") return [];
+  const record = input as { cwd?: unknown; jobs?: unknown };
+  const paths: string[] = [];
+  if (typeof record.cwd === "string" && record.cwd.length > 0) paths.push(record.cwd);
+  if (Array.isArray(record.jobs)) {
+    for (const job of record.jobs) {
+      if (!job || typeof job !== "object") continue;
+      const cwd = (job as { cwd?: unknown }).cwd;
+      if (typeof cwd === "string" && cwd.length > 0) paths.push(cwd);
+    }
+  }
+  return paths;
+}
+
+export function outOfScopeSpawnPath(input: unknown, scope: readonly string[]): string | null {
+  for (const path of spawnTargetPaths(input)) {
+    if (!pathIsInScope(path, scope)) return path;
+  }
+  return null;
+}
+
 export function evaluate(state: LoopState, intent: ToolIntent): GateDecision {
   if (intent === "terraloop-control" || intent === "read") return { allowed: true };
 
@@ -67,7 +89,7 @@ export function evaluate(state: LoopState, intent: ToolIntent): GateDecision {
       return {
         allowed: false,
         reason:
-          "terraloop is driving. The driver orchestrates and verifies; it does not do the work inline. Spawn a bounded terrarium child for this, or call terraloop_override with a reason to take one inline action.",
+          "terraloop is driving. The parent is the default worker. Take a terraloop_override to edit in-scope, or spawn a child only when a named lever applies and the cwd stays inside locked scope.",
       };
     }
   }
