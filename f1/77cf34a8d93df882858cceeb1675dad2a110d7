@@ -1,0 +1,19 @@
+gate.ts
+  s_58fd295f2ea96b::t_7dcc0b1b05bcd3 35-56,92
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "f177cf34a8d93df882858cceeb1675dad2a110d7",
+  "prompts": {},
+  "sessions": {
+    "s_58fd295f2ea96b": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "019e8e0e-e5c2-78a0-81ed-9f91469bc981",
+        "model": "grok-4.6"
+      },
+      "human_author": "Jordan Coeyman <jcoeyman@cloudflare.com>"
+    }
+  }
+}
