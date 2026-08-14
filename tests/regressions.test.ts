@@ -26,12 +26,12 @@ test("the override budget is finite and refuses past the cap", () => {
   if (!refused.granted) expect(refused.reason).toContain("budget exhausted");
 });
 
-test("a granted override increments the used count and caps calls at three", () => {
+test("a granted override increments the used count and caps calls at eight", () => {
   const fresh = state({ phase: "driving", contract });
   const granted = requestOverride(fresh, "child stalled twice on this edit", 99, overrideBudget);
   expect(granted.granted).toBe(true);
   if (!granted.granted) return;
-  expect(granted.calls).toBe(3);
+  expect(granted.calls).toBe(8);
   expect(granted.state.overrideGrantsUsed).toBe(1);
 });
 

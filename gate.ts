@@ -105,7 +105,7 @@ export function requestOverride(state: LoopState, reason: string, requestedCalls
       reason: `override budget exhausted (${state.overrideGrantsUsed}/${budget} grants used this loop). Delegate this work to a terrarium child, or ask the user to reset with /terraloop-off and re-arm.`,
     };
   }
-  const calls = Math.max(1, Math.min(requestedCalls, 3));
+  const calls = Math.max(1, Math.min(requestedCalls, 8));
   return {
     granted: true,
     calls,

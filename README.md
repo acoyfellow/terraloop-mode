@@ -99,8 +99,8 @@ permits inline mutation after an explicit grant:
 terraloop_control action=override reason="child stalled twice on this edit" calls=2
 ```
 
-The reason must be at least 12 characters. Each grant covers at most 3 mutations
-and expires when they are used, and a loop gets **5 grants total**. Past that the
+The reason must be at least 12 characters. Each grant covers at most 8 mutations
+and expires when they are used, and a loop gets **20 grants total**. Past that the
 override is refused and points back at delegation.
 
 The budget exists because an unbounded escape hatch becomes the main road. In the
@@ -109,7 +109,7 @@ mutations against 10 spawns: the gate was firing constantly and being routed
 around every time. A bypass that costs nothing is not a bypass, it is the default.
 
 `terraloop_control action=status` reports `delegated=N inline=N
-overrideGrants=N/5` so that ratio is visible while the loop runs, not
+overrideGrants=N/20` so that ratio is visible while the loop runs, not
 archaeology afterward. Every grant, consumption, refusal, and block is appended to
 `~/.terrarium/terraloop-audit.jsonl`.
 

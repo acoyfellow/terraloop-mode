@@ -17,7 +17,7 @@ export type OverrideGrant = {
   remainingCalls: number;
 };
 
-export const overrideBudget = 5;
+export const overrideBudget = 20;
 
 export type LoopState = {
   phase: Phase;
