@@ -181,7 +181,7 @@ export default function terraloopMode(pi: ExtensionAPI) {
       "",
       "This is enforced by a tool-call gate, not by your judgment:",
       "- armed: terrarium spawns and inline mutation are blocked until a contract is locked.",
-      "- driving: you orchestrate and verify. Inline edit/write/mutating-bash is blocked. Spawn bounded children instead.",
+      "- driving: you are the default worker. In-scope edit/write/mutating-bash is allowed. Spawn a child only when a named lever applies.",
       "- gated: new spawns are blocked until the driver loop is deleted.",
       "Use terraloop_control action=override with a reason when an inline action is genuinely required.",
       "You cannot leave this mode or clear its state. Only the user can, with /terraloop-off.",

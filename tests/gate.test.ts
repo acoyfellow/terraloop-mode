@@ -55,13 +55,11 @@ test("armed blocks inline mutation", () => {
   expect(evaluate(state({ phase: "armed" }), "mutate").allowed).toBe(false);
 });
 
-test("driving allows spawning and blocks inline mutation", () => {
+test("driving allows spawning and in-scope inline mutation", () => {
   const driving = state({ phase: "driving", contract, driverLoopId: "loop-1" });
   expect(evaluate(driving, "spawn").allowed).toBe(true);
   expect(evaluate(driving, "driver-delete").allowed).toBe(true);
-  const mutation = evaluate(driving, "mutate");
-  expect(mutation.allowed).toBe(false);
-  if (!mutation.allowed) expect(mutation.reason).toContain("terraloop_override");
+  expect(evaluate(driving, "mutate").allowed).toBe(true);
 });
 
 test("gated blocks new drivers and inline work but never verification spawns", () => {
@@ -138,7 +136,7 @@ test("negative control: a permissive gate fails the blocking scenarios", () => {
   const mustBlock = [
     [state({ phase: "armed" }), "spawn"],
     [state({ phase: "armed" }), "mutate"],
-    [state({ phase: "driving", contract }), "mutate"],
+    [state({ phase: "gated", contract }), "mutate"],
     [state({ phase: "gated", contract }), "driver-create"],
   ] as const;
   let realBlocks = 0;

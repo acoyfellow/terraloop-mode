@@ -72,7 +72,7 @@ contract and wait for a one-word go before locking.
 | --- | --- | --- |
 | `off` | default | nothing |
 | `armed` | `/terraloop`, or `action=arm` with a north star | terrarium spawns, inline mutation, and driver creation until the contract is complete |
-| `driving` | creating the driver loop with a locked contract | inline `edit` / `write` / mutating `bash`, and any path outside the locked scope |
+| `driving` | creating the driver loop with a locked contract | any path outside the locked scope. In-scope parent `edit` / `write` / mutating `bash` is allowed. Terrarium still needs a named lever. |
 | `gated` | `terraloop_control action=gate`, after its proof command passes | new driver loops and further inline mutation |
 
 Read-only tools are never blocked in any phase. `gated` deliberately still allows
@@ -91,22 +91,20 @@ deadlocking.
 
 ## Override
 
-A hard block on inline work is sometimes wrong. The protocol itself says that a
-child which stalls the same way twice should be done directly. So `driving`
-permits inline mutation after an explicit grant:
+`driving` already allows in-scope parent work. Override is not the default
+road. Use it only for a genuine exception: a path outside the locked scope, or
+work after the stop gate.
 
 ```
-terraloop_control action=override reason="child stalled twice on this edit" calls=2
+terraloop_control action=override reason="must edit a path the contract omitted" calls=2
 ```
 
 The reason must be at least 12 characters. Each grant covers at most 8 mutations
 and expires when they are used, and a loop gets **20 grants total**. Past that the
-override is refused and points back at delegation.
+override is refused.
 
-The budget exists because an unbounded escape hatch becomes the main road. In the
-first real loop run against an earlier build, 60 grants authorized 125 inline
-mutations against 10 spawns: the gate was firing constantly and being routed
-around every time. A bypass that costs nothing is not a bypass, it is the default.
+The old gate taxed every parent edit. That burned the budget on normal work and
+forced Terrarium for jobs that belonged in the parent. Do not put that tax back.
 
 `terraloop_control action=status` reports `delegated=N inline=N
 overrideGrants=N/20` so that ratio is visible while the loop runs, not

@@ -25,7 +25,7 @@ around it.
 | --- | --- |
 | `off` | nothing |
 | `armed` | terrarium spawns, inline `edit`/`write`/mutating `bash`, driver creation until the contract is complete |
-| `driving` | inline `edit`/`write`/mutating `bash` without an override; any parent or child path outside the locked scope, including spawn `cwd` |
+| `driving` | any parent or child path outside the locked scope, including spawn `cwd`. In-scope parent edits are allowed. Terrarium still needs a named lever. |
 | `gated` | new spawns and new drivers until the driver loop is deleted |
 
 Read-only tools are never blocked. Check phase any time with
@@ -91,16 +91,16 @@ yourself, consolidate, and advance one step. Do not list recent runs or pass
 `verbose` unless `pid` or `logPath` is required. Ride completion callbacks; never
 sleep or poll inline.
 
-Small parent edits use override. Do not spawn a child to escape a scope or
-override block:
+Do the next cheap in-scope edit yourself. Do not take an override for ordinary
+in-scope work. Override is for a genuine exception: a path outside scope, or
+work after the stop gate. Do not spawn a child to escape a scope block.
 
 ```
-terraloop_control action=override reason="<12+ chars, why inline is required>" calls=1
+terraloop_control action=override reason="<12+ chars, why the exception is required>" calls=1
 ```
 
 Grants are bounded, expire when consumed, and are recorded to
-`~/.terrarium/terraloop-audit.jsonl`. Use it honestly rather than to route around
-a block you find inconvenient.
+`~/.terrarium/terraloop-audit.jsonl`.
 
 ### 4. Reaching the gate
 

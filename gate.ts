@@ -84,13 +84,8 @@ export function evaluate(state: LoopState, intent: ToolIntent): GateDecision {
   }
 
   if (state.phase === "driving") {
-    if (intent === "spawn" || intent === "driver-create" || intent === "driver-delete") return { allowed: true };
-    if (intent === "mutate") {
-      return {
-        allowed: false,
-        reason:
-          "terraloop is driving. The parent is the default worker. Take a terraloop_override to edit in-scope, or spawn a child only when a named lever applies and the cwd stays inside locked scope.",
-      };
+    if (intent === "spawn" || intent === "driver-create" || intent === "driver-delete" || intent === "mutate") {
+      return { allowed: true };
     }
   }
 

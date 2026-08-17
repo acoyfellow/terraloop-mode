@@ -29,8 +29,9 @@ A child must not receive a wider capability than the parent has in this session.
   re-lock a contract that names the path.
 - Do not raise `maxDepth`, `allowSpawn`, or write isolation beyond what the
   parent is allowed. Children inherit a subset, never a superset.
-- An override grant is for the **parent** to do a bounded inline edit. It is
-  not a license to delegate an out-of-scope write.
+- An override grant is a rare exception (out of scope, or work after the stop
+  gate). It is not a license to delegate an out-of-scope write. Ordinary
+  in-scope parent edits do not use override.
 
 The gate is not a suggestion. Sidestepping it with a child is the failure this
 rule exists to prevent.
@@ -47,7 +48,8 @@ Spawn only when at least one lever is true. Write that lever in the child task.
 | **Context** | A huge read-only dig that would bloat the parent | `readOnly: true`, `profile: "minimal"` |
 | **Proof** | An external fact the parent must not take from chat | Child runs tests; parent reruns the same command |
 
-No lever → no spawn. Override and edit, or just edit if the phase allows it.
+No lever → no spawn. Edit in the parent. Do not take an override for ordinary
+in-scope work.
 
 ## Antipatterns (protocol violations)
 
@@ -160,9 +162,8 @@ Do not sleep or poll inline; ride completion callbacks between ticks.
 6. Any child that can write must use `isolation: "copy"` or
    `isolation: "worktree"`; `isolation: "none"` in a shared cwd is forbidden
    whenever more than one child can write. `cwd` must be inside locked scope.
-7. Small in-scope parent edits use `terraloop_control action=override` with a
-   real reason. Do not spawn a child to escape a scope block or an override
-   block.
+7. Small in-scope parent edits happen in the parent. Do not spawn a child to
+   escape a scope block. Override is only for a genuine exception.
 
 ## Verify-it-yourself (non-negotiable)
 

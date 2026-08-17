@@ -22,9 +22,10 @@ for sandboxing untrusted code.
 
 - The protocol's ordering is enforced rather than remembered, so a compacted or
   distracted session cannot silently skip the contract or the driver loop.
-- Bypasses are explicit and recorded. Inline work during a loop requires an
-  override with a stated reason, and every grant, consumption, refusal, and block
-  is appended to `~/.terrarium/terraloop-audit.jsonl`.
+- Scope is checked. Writes outside the contract's declared paths are refused.
+  Override exists for a genuine exception and is recorded. Every grant,
+  consumption, refusal, and block is appended to
+  `~/.terrarium/terraloop-audit.jsonl`.
 - Scope is checked. Writes outside the contract's declared paths are refused, so
   a loop pointed at one repository does not quietly edit another.
 
