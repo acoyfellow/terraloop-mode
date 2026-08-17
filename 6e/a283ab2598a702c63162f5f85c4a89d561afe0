@@ -1,0 +1,19 @@
+scripts/prove-spawn-scope.mjs
+  s_fbc698c57649da::t_cf79a14a630ba7 1-11
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "6ea283ab2598a702c63162f5f85c4a89d561afe0",
+  "prompts": {},
+  "sessions": {
+    "s_fbc698c57649da": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "019ebbde-e57b-7697-94e8-b45a3f83ebdc",
+        "model": "grok-4.6"
+      },
+      "human_author": "Jordan Coeyman <jcoeyman@cloudflare.com>"
+    }
+  }
+}
