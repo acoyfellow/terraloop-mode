@@ -1,0 +1,27 @@
+README.md
+  s_99b55ecf7d26fa::t_c4bf175885bb5a 39-41,117-126
+extension.ts
+  s_99b55ecf7d26fa::t_004b4660731674 12,92,106,136-143,158,176-182
+state.ts
+  s_99b55ecf7d26fa::t_1682db196450ac 20-38,44-45,69-70,88-89,124-141,143-147
+tests/arming.test.ts
+  s_99b55ecf7d26fa::t_2140598aa45af4 31-36
+tests/gate.test.ts
+  s_99b55ecf7d26fa::t_e549de4b0434d2 3,125-165
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "ee3324ae7a8eced22b69e4ce4a0d83bea2006e16",
+  "prompts": {},
+  "sessions": {
+    "s_99b55ecf7d26fa": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a01133-f7dc-78e5-bff4-bbe27a662c2a",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Jordan Coeyman <jcoeyman@cloudflare.com>"
+    }
+  }
+}
