@@ -9,6 +9,7 @@ import {
   overrideBudget,
   readState,
   recordAudit,
+  releaseState,
   statePathForSession,
   writeState,
   type LoopState,
@@ -88,7 +89,7 @@ export default function terraloopMode(pi: ExtensionAPI) {
         if (state.phase !== "off") {
           return text(`arm rejected: terraloop is already ${state.phase} in this session.\n${describeState(state)}`);
         }
-        const next = writeSessionState(ctx, { ...initialState(), phase: "armed" });
+        const next = writeSessionState(ctx, { ...initialState(), lastCompletedLoop: state.lastCompletedLoop, phase: "armed" });
         recordSessionAudit(ctx, { event: "arm", via: "agent-tool", northStar });
         return text(`${describeState(next)}\n\n${onRamp(northStar, "you, by tool call")}`);
       }
@@ -102,7 +103,7 @@ export default function terraloopMode(pi: ExtensionAPI) {
         if (!contractIsComplete(contract)) {
           return text("lock rejected: goal, gate, scope, and proof are all required and must be non-empty.");
         }
-        const next = writeSessionState(ctx, { ...state, contract });
+        const next = writeSessionState(ctx, { ...state, contract, gateReceipt: null });
         recordSessionAudit(ctx, { event: "lock", contract });
         return text(`${describeState(next)}\n\nContract locked. Create the driver loop with loops_task action=create, then spawn children.`);
       }
@@ -132,8 +133,14 @@ export default function terraloopMode(pi: ExtensionAPI) {
             : `the proof command failed with exit ${proof.exitCode}.\n\n$ ${proof.command}\n${proof.output}`;
         return text(`Gate refused: ${detail}`);
       }
-      const next = writeSessionState(ctx, { ...state, phase: "gated" });
-      recordSessionAudit(ctx, { event: "gate-reached", command: proof.command, contract: state.contract });
+      const gateReceipt = {
+        command: proof.command,
+        exitCode: 0 as const,
+        output: proof.output,
+        verifiedAt: new Date().toISOString(),
+      };
+      const next = writeSessionState(ctx, { ...state, phase: "gated", gateReceipt });
+      recordSessionAudit(ctx, { event: "gate-reached", command: proof.command, contract: state.contract, gateReceipt });
       return text(
         `Gate verified by running the contract's proof.\n\n$ ${proof.command}\n${proof.output}\n\n${describeState(next)}\n\nDelete the driver loop with loops_task action=delete, then report what is proven and what remains. The user leaves terraloop with /terraloop-off.`,
       );
@@ -148,7 +155,7 @@ export default function terraloopMode(pi: ExtensionAPI) {
         ctx.ui.notify(`terraloop already ${state.phase} in this session. Use /terraloop-off to leave.`, "warning");
         return;
       }
-      writeSessionState(ctx, { ...initialState(), phase: "armed" });
+      writeSessionState(ctx, { ...initialState(), lastCompletedLoop: state.lastCompletedLoop, phase: "armed" });
       recordSessionAudit(ctx, { event: "arm", via: "slash-command", northStar: args.trim() || null });
       ctx.ui.notify("terraloop armed for this session — other Pi sessions are unaffected", "info");
       pi.sendUserMessage(onRamp(args.trim(), "the user, by slash command"));
@@ -166,8 +173,13 @@ export default function terraloopMode(pi: ExtensionAPI) {
     description: "Leave terraloop mode in this Pi session and clear its gate",
     handler: async (_args, ctx) => {
       const previous = readSessionState(ctx);
-      writeSessionState(ctx, initialState());
-      recordSessionAudit(ctx, { event: "release", via: "slash-command", previousPhase: previous.phase });
+      const released = writeSessionState(ctx, releaseState(previous));
+      recordSessionAudit(ctx, {
+        event: "release",
+        via: "slash-command",
+        previousPhase: previous.phase,
+        lastCompletedLoop: released.lastCompletedLoop,
+      });
       ctx.ui.notify(`terraloop off in this session (was ${previous.phase})`, "info");
     },
   });

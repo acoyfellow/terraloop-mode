@@ -17,11 +17,32 @@ export type OverrideGrant = {
   remainingCalls: number;
 };
 
+export type GateReceipt = {
+  command: string;
+  exitCode: 0;
+  output: string;
+  verifiedAt: string;
+};
+
+export type CompletedLoop = {
+  contract: Contract;
+  gateReceipt: GateReceipt;
+  driverLoopId: string | null;
+  spawnedRunIds: readonly string[];
+  overrideGrantsUsed: number;
+  inlineMutations: number;
+  delegatedSpawns: number;
+  completedAt: string;
+  releasedAt: string;
+};
+
 export const overrideBudget = 20;
 
 export type LoopState = {
   phase: Phase;
   contract: Contract | null;
+  gateReceipt: GateReceipt | null;
+  lastCompletedLoop: CompletedLoop | null;
   driverLoopId: string | null;
   spawnedRunIds: readonly string[];
   override: OverrideGrant | null;
@@ -45,6 +66,8 @@ export function initialState(): LoopState {
   return {
     phase: "off",
     contract: null,
+    gateReceipt: null,
+    lastCompletedLoop: null,
     driverLoopId: null,
     spawnedRunIds: [],
     override: null,
@@ -62,6 +85,8 @@ export function readState(path: string): LoopState {
     return {
       phase,
       contract: parsed.contract ?? null,
+      gateReceipt: parsed.gateReceipt ?? null,
+      lastCompletedLoop: parsed.lastCompletedLoop ?? null,
       driverLoopId: parsed.driverLoopId ?? null,
       spawnedRunIds: parsed.spawnedRunIds ?? [],
       override: parsed.override ?? null,
@@ -96,8 +121,30 @@ export function contractIsComplete(contract: Contract | null): contract is Contr
   return contract.goal.trim().length > 0 && contract.gate.trim().length > 0 && contract.scope.length > 0 && contract.proof.trim().length > 0;
 }
 
+export function releaseState(state: LoopState, releasedAt = new Date().toISOString()): LoopState {
+  const lastCompletedLoop =
+    state.phase === "gated" && contractIsComplete(state.contract) && state.gateReceipt
+      ? {
+          contract: state.contract,
+          gateReceipt: state.gateReceipt,
+          driverLoopId: state.driverLoopId,
+          spawnedRunIds: state.spawnedRunIds,
+          overrideGrantsUsed: state.overrideGrantsUsed,
+          inlineMutations: state.inlineMutations,
+          delegatedSpawns: state.delegatedSpawns,
+          completedAt: state.gateReceipt.verifiedAt,
+          releasedAt,
+        }
+      : state.lastCompletedLoop;
+  return { ...initialState(), lastCompletedLoop };
+}
+
 export function describeState(state: LoopState): string {
-  if (state.phase === "off") return "terraloop: off";
+  if (state.phase === "off") {
+    return state.lastCompletedLoop
+      ? `terraloop: off | lastCompleted=${state.lastCompletedLoop.completedAt}`
+      : "terraloop: off";
+  }
   const parts = [`terraloop: ${state.phase}`];
   if (state.contract) parts.push(`goal=${state.contract.goal}`, `gate=${state.contract.gate}`, `scope=${state.contract.scope.join(",")}`, `proof=${state.contract.proof}`);
   parts.push(`driver=${state.driverLoopId ?? "none"}`);

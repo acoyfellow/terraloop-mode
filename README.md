@@ -36,8 +36,9 @@ The agent arms the gate itself and is then held to the order: draft Goal / Gate 
 Scope / Proof and wait for your go, lock the contract, create a driver loop, and
 only then spawn children. Each step is enforced, not requested.
 
-`/terraloop` arms it explicitly if you prefer. `/terraloop-off` clears the gate at
-any time and is the only way out.
+`/terraloop` arms it explicitly if you prefer. `/terraloop-off` clears the active
+gate at any time and is the only way out. It keeps the last completed contract
+and gate receipt so a review can run after release.
 
 ## Arming and releasing are not symmetric
 
@@ -113,10 +114,16 @@ archaeology afterward. Every grant, consumption, refusal, and block is appended 
 
 ## State
 
-Phase, contract, driver id, and override live in a file keyed by the current Pi
-session: `~/.terrarium/terraloop-state/<session-id>.json`. State on disk rather
-than in context means the gate survives compaction, while session-keyed files let
-multiple Pi sessions run independent terraloops concurrently.
+Phase, contract, driver ID, proof receipt, and override live in a file keyed by
+the current Pi session: `~/.terrarium/terraloop-state/<session-id>.json`. State on
+disk rather than in context means the gate survives compaction. Session-keyed
+files let multiple Pi sessions run independent terraloops concurrently.
+
+`/terraloop-off` clears the active phase, contract, and driver. It keeps
+`lastCompletedLoop`. That record contains the completed contract, exact proof
+command, bounded proof output, child run IDs, counters, and release time. A later
+review can use this record without selecting another session or trusting chat
+history.
 
 The extension itself remains globally installed. Only its mutable gate state is
 session-scoped. The shared audit log includes `sessionId` on every new event so

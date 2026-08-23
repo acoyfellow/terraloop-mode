@@ -28,6 +28,12 @@ test("releasing stays a user slash command", () => {
   expect(extensionSource).toContain('pi.registerCommand("terraloop-status"');
 });
 
+test("gate and release persist review evidence", () => {
+  expect(extensionSource).toContain("gateReceipt");
+  expect(extensionSource).toContain("releaseState(previous)");
+  expect(extensionSource).toContain("lastCompletedLoop: released.lastCompletedLoop");
+});
+
 test("both arming paths record how the loop was armed", () => {
   expect(extensionSource).toContain('via: "agent-tool"');
   expect(extensionSource).toContain('via: "slash-command"');

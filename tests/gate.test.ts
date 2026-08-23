@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 import { classifyTool, evaluate, consumeOverride, outOfScopeSpawnPath, pathIsInScope, spawnTargetPaths } from "../gate.ts";
-import { contractIsComplete, initialState, readState, statePathForSession, writeState, type LoopState } from "../state.ts";
+import { contractIsComplete, initialState, readState, releaseState, statePathForSession, writeState, type LoopState } from "../state.ts";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -120,6 +120,47 @@ test("state round-trips through disk and survives a corrupt file", () => {
   } finally {
     rmSync(directory, { recursive: true, force: true });
   }
+});
+
+test("release preserves the completed contract and proof receipt", () => {
+  const gated = state({
+    phase: "gated",
+    contract,
+    driverLoopId: "loop-9",
+    spawnedRunIds: ["ter_one"],
+    delegatedSpawns: 1,
+    gateReceipt: {
+      command: contract.proof,
+      exitCode: 0,
+      output: "proof passed",
+      verifiedAt: "2026-08-22T14:15:50.108Z",
+    },
+  });
+  const released = releaseState(gated, "2026-08-22T17:13:34.968Z");
+  expect(released.phase).toBe("off");
+  expect(released.contract).toBeNull();
+  expect(released.lastCompletedLoop?.contract).toEqual(contract);
+  expect(released.lastCompletedLoop?.gateReceipt.output).toBe("proof passed");
+  expect(released.lastCompletedLoop?.spawnedRunIds).toEqual(["ter_one"]);
+  expect(released.lastCompletedLoop?.releasedAt).toBe("2026-08-22T17:13:34.968Z");
+});
+
+test("release before the gate does not replace the prior completed loop", () => {
+  const completed = releaseState(
+    state({
+      phase: "gated",
+      contract,
+      gateReceipt: {
+        command: contract.proof,
+        exitCode: 0,
+        output: "proof passed",
+        verifiedAt: "2026-08-22T14:15:50.108Z",
+      },
+    }),
+    "2026-08-22T17:13:34.968Z",
+  ).lastCompletedLoop;
+  const released = releaseState(state({ phase: "driving", contract, lastCompletedLoop: completed }));
+  expect(released.lastCompletedLoop).toEqual(completed);
 });
 
 test("parallel Pi sessions have independent state files", () => {
