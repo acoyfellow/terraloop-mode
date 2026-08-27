@@ -10,9 +10,12 @@ A **parent-driven** loop toward a falsifiable gate. The parent is the default
 implementer. Terrarium is a lever the parent picks up for a named reason, not
 the default place work happens.
 
-The driver (`loops_task`) keeps the session moving: it reaps finished children,
-verifies claims, does the next cheap in-scope step itself, and only then
-considers a spawn. It stops at the locked gate.
+The driver (`loops_task`) is a **long safety net**. It re-injects a prompt only
+when the session is **idle**. Speed comes from the **current turn** and from
+**Terrarium completion callbacks**, not from waiting for the next heartbeat.
+
+If this turn still has in-scope work, do it now. Ending the turn so the
+heartbeat can continue is a protocol violation: that is a dead spot.
 
 If you cannot name a lever in one line, do the work in the parent. A child
 without a lever is wasted tokens and extra failure modes.
@@ -66,6 +69,9 @@ in-scope work.
   stall → parent does the work.
 - **Exit 143 as a result.** Leftover `Cancelled` callbacks are SIGTERM corpses,
   not research.
+- **Yielding to the heartbeat.** Ending the turn while in-scope work remains,
+  so `loops_task` can continue later. The heartbeat only runs when the session
+  is idle. That wait is a dead spot. Exhaust the turn.
 - **Heartbeat during cancel.** A 30s / 2m driver still firing while you reap.
 - **`-ne` on Pi** when the model provider comes from an extension.
 - **Trusting `ok: true`, `status: running`** when the log has no model output.
@@ -105,8 +111,9 @@ tool call rather than left to the agent's discretion.
    truly collide, disable the specific extension instead of all of them.
 
 2. **`/loop` pi extension (`loops_task`)** — the recurring DRIVER. It re-injects
-   a prompt on an interval while the session is open and idle, so the parent
-   keeps reaping/verifying/advancing without a human re-prompting each tick.
+   a prompt on an interval **only while the session is open and idle**. It is
+   not the fast path. The fast path is: finish this turn, and ride Terrarium
+   completion callbacks that wake the session immediately.
    - `loops_task action=create` with `interval` (e.g. 30s, 2m, 2h, 1d), `prompt`
      (the full driver instructions incl. the stop gate + the child run IDs),
      `maxRuns`, `expiresIn`.
@@ -115,12 +122,13 @@ tool call rather than left to the agent's discretion.
      prompt must say so), so it does not spin against a satisfied or human-gated
      gate.
 
-Pattern: `loops_task` create the driver → each tick the parent does the next
-cheap in-scope step, or, if a completion callback arrived, calls
-`terrarium_status({ runId })` and `terrarium_read` for that child, verifies, and
-only then considers another spawn. On the stop gate, `loops_task delete`. Do
-not list recent runs or pass `verbose` unless `pid` or `logPath` is required.
-Do not sleep or poll inline; ride completion callbacks between ticks.
+Pattern: `loops_task` create the driver. **This turn** does the next cheap
+in-scope step until the turn is exhausted. If a completion callback arrives,
+`terrarium_status({ runId })` + `terrarium_read`, verify, then the next step —
+still in this turn if work remains. The heartbeat only covers the case that the
+session actually went idle with nothing left to do. On the stop gate,
+`loops_task delete`. Do not list recent runs or pass `verbose` unless `pid` or
+`logPath` is required. Do not sleep or poll inline.
 
 > **Terrarium usage**
 >
@@ -156,9 +164,11 @@ Do not sleep or poll inline; ride completion callbacks between ticks.
    work may spawn concurrently; a single edit must not.
 4. Work BACKWARD from the goal when the goal is a destination: name the end
    state, then the smallest step that unlocks the next, then run them.
-5. The driver rides callbacks; it does not sleep or poll inline. Each tick
-   reaps finished children, verifies, does one parent step or one justified
-   spawn.
+5. The current turn is the fast path. Ride Terrarium completion callbacks;
+   do not sleep or poll inline. Do not end the turn while an in-scope next
+   step exists. The heartbeat is only the idle safety net. Each callback or
+   exhausted-turn tick reaps, verifies, then does the next parent step or one
+   justified spawn.
 6. Any child that can write must use `isolation: "copy"` or
    `isolation: "worktree"`; `isolation: "none"` in a shared cwd is forbidden
    whenever more than one child can write. `cwd` must be inside locked scope.

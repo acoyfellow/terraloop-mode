@@ -87,9 +87,11 @@ from writing.
 
 On a completion callback, check that known child with
 `terrarium_status({ runId })`, then `terrarium_read` it, verify every claim
-yourself, consolidate, and advance one step. Do not list recent runs or pass
-`verbose` unless `pid` or `logPath` is required. Ride completion callbacks; never
-sleep or poll inline.
+yourself, consolidate, and advance the next in-scope step **in this turn**.
+Do not end the turn so the heartbeat can continue. `loops_task` only fires
+while the session is idle; yielding early is a dead spot. Exhaust the turn.
+Do not list recent runs or pass `verbose` unless `pid` or `logPath` is required.
+Ride completion callbacks; never sleep or poll inline.
 
 Do the next cheap in-scope edit yourself. Do not take an override for ordinary
 in-scope work. Override is for a genuine exception: a path outside scope, or
