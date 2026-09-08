@@ -31,7 +31,8 @@
   },
   "scripts": {
     "check": "bun x tsc --noEmit && bun test",
-    "test": "bun test"
+    "test": "bun test",
+    "prove:settle": "node scripts/prove-settle-tick.mjs"
   },
   "peerDependencies": {
     "@earendil-works/pi-ai": "*",

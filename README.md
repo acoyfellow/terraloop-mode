@@ -185,6 +185,41 @@ processes with the extension loaded and the phase set to `armed`:
 
 Every block and every override appears in the audit log.
 
+## Settle ticks: the driver advances when the turn ends
+
+A `loops_task` driver fires on an interval and only while Pi is idle. Without
+help, every driving turn ends the same way: the agent settles, Pi goes idle, and
+the loop waits out the rest of the interval before the next tick. The heartbeat
+was doing the job of a callback.
+
+Pi's `agent_settled` event fires once Pi will not retry, compact, or continue on
+its own. While the phase is `driving`, the extension uses that event to deliver
+the next driver tick immediately as a follow-up message carrying the same prompt
+the driver was created with. The interval driver stays as the recovery path.
+
+A settle tick fires only when all of these hold:
+
+- the phase is `driving`, the contract is complete, and a driver id and prompt
+  were captured when `loops_task create` ran;
+- Pi is idle and no follow-up is already queued;
+- the run that just settled made at least one tool call, so a turn where the
+  agent only talked hands the next tick back to the heartbeat instead of
+  spinning;
+- fewer than `settleTickBudget` (100) settle ticks have fired this loop.
+
+Deleting the driver with `loops_task delete` or `clear` drops the captured driver
+and stops settle ticks. Every delivery and every skip is written to the audit log
+as `settle-tick-delivered` or `settle-tick-skipped` with a reason.
+
+```sh
+bun run prove:settle
+```
+
+The proof launches a real headless `pi -p --no-session` with a harness that seeds
+a driving state, asks for one tool call, and checks that exactly one settle tick
+was delivered, that the model answered it in a second agent run, that the
+following tool-less run was skipped, and that the persisted `settleTicks` is 1.
+
 ## Reaching the gate
 
 When the agent believes the work is done it calls `terraloop_control
@@ -233,6 +268,8 @@ extension.ts          Pi wiring: slash commands, tool, tool_call gate
 gate.ts               classifies each tool call and decides allow/block
 state.ts              per-session phase and contract, persisted to disk
 proof.ts              extracts and runs the contract's proof command
+settle.ts             decides whether a settled turn delivers the next driver tick
+scripts/              headless pi proofs, including prove-settle-tick.mjs
 skills/terraloop/     the protocol the gate enforces
 tests/                phase transitions, classification, negative control
 ```

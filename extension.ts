@@ -15,6 +15,7 @@ import {
   type LoopState,
 } from "./state.ts";
 import { verifyProof } from "./proof.ts";
+import { settleTickDecision, settleTickMessage } from "./settle.ts";
 
 const controlParameters = Type.Object({
   action: StringEnum(["arm", "lock", "override", "status", "gate"] as const),
@@ -64,6 +65,8 @@ function onRamp(northStar: string, armedBy: "the user, by slash command" | "you,
 }
 
 export default function terraloopMode(pi: ExtensionAPI) {
+  let toolCallsThisRun = 0;
+
   pi.registerTool({
     name: "terraloop_control",
     label: "Terraloop",
@@ -205,14 +208,25 @@ export default function terraloopMode(pi: ExtensionAPI) {
     const state = readSessionState(ctx);
     if (state.phase === "off") return undefined;
     const intent = classifyTool(event.toolName, event.input);
-    if (intent !== "driver-create" && intent !== "spawn") return undefined;
+    if (intent !== "driver-create" && intent !== "driver-delete" && intent !== "spawn") return undefined;
 
     const serialized = JSON.stringify(event.details ?? "") + JSON.stringify(event.content ?? "");
     if (intent === "driver-create" && state.driverLoopId === null) {
       const loopId = serialized.match(/\b(?:loop|task)[-_ ]?id["':\s]+([A-Za-z0-9_-]{4,})/i)?.[1] ?? serialized.match(/\bid["':\s]+([A-Za-z0-9_-]{6,})/)?.[1] ?? null;
+      const prompt = (event.input as { prompt?: unknown } | null)?.prompt;
+      const driverPrompt = typeof prompt === "string" && prompt.trim().length > 0 ? prompt.trim() : null;
       if (loopId) {
-        writeSessionState(ctx, { ...state, driverLoopId: loopId });
-        recordSessionAudit(ctx, { event: "driver-id-captured", driverLoopId: loopId });
+        writeSessionState(ctx, { ...state, driverLoopId: loopId, driverPrompt, settleTicks: 0 });
+        recordSessionAudit(ctx, { event: "driver-id-captured", driverLoopId: loopId, driverPromptCaptured: driverPrompt !== null });
+      }
+      return undefined;
+    }
+    if (intent === "driver-delete" && state.driverLoopId !== null) {
+      const input = event.input as { action?: unknown; id?: unknown } | null;
+      const clearsDriver = input?.action === "clear" || input?.id === state.driverLoopId;
+      if (clearsDriver) {
+        writeSessionState(ctx, { ...state, driverLoopId: null, driverPrompt: null });
+        recordSessionAudit(ctx, { event: "driver-deleted", driverLoopId: state.driverLoopId });
       }
       return undefined;
     }
@@ -227,7 +241,37 @@ export default function terraloopMode(pi: ExtensionAPI) {
     return undefined;
   });
 
+  pi.on("agent_start", () => {
+    toolCallsThisRun = 0;
+  });
+
+  pi.on("agent_settled", (_event, ctx) => {
+    const state = readSessionState(ctx);
+    if (state.phase === "off") return;
+    const decision = settleTickDecision(state, {
+      toolCallsThisRun,
+      idle: ctx.isIdle(),
+      pendingMessages: ctx.hasPendingMessages(),
+    });
+    if (!decision.deliver) {
+      recordSessionAudit(ctx, { event: "settle-tick-skipped", phase: state.phase, reason: decision.reason });
+      return;
+    }
+    writeSessionState(ctx, decision.state);
+    recordSessionAudit(ctx, { event: "settle-tick-delivered", tick: decision.tick, driverLoopId: state.driverLoopId });
+    pi.sendMessage(
+      {
+        customType: "terraloop-settle-tick",
+        content: settleTickMessage(state, decision.tick),
+        display: true,
+        details: { tick: decision.tick, driverLoopId: state.driverLoopId },
+      },
+      { triggerTurn: true, deliverAs: "followUp" },
+    );
+  });
+
   pi.on("tool_call", (event, ctx) => {
+    toolCallsThisRun += 1;
     const state = readSessionState(ctx);
     if (state.phase === "off") return undefined;
 
