@@ -90,6 +90,9 @@ On a completion callback, check that known child with
 yourself, consolidate, and advance the next in-scope step **in this turn**.
 Do not end the turn so the heartbeat can continue. `loops_task` only fires
 while the session is idle; yielding early is a dead spot. Exhaust the turn.
+If a driving turn that made tool calls does settle, the extension delivers a
+settle tick with the driver prompt at once; treat it as the next tick, not as
+a new request.
 Do not list recent runs or pass `verbose` unless `pid` or `logPath` is required.
 Ride completion callbacks; never sleep or poll inline.
 

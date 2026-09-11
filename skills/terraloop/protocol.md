@@ -17,6 +17,13 @@ when the session is **idle**. Speed comes from the **current turn** and from
 If this turn still has in-scope work, do it now. Ending the turn so the
 heartbeat can continue is a protocol violation: that is a dead spot.
 
+The extension closes that dead spot mechanically. When a driving turn settles
+(`agent_settled`) after making at least one tool call, it re-delivers the
+driver prompt immediately as a **settle tick**; the interval heartbeat only
+covers a turn that settled without doing anything. Settle ticks are budgeted
+(100 per loop) and stop when the driver is deleted or the phase leaves
+`driving`. Every delivery and skip is audited.
+
 If you cannot name a lever in one line, do the work in the parent. A child
 without a lever is wasted tokens and extra failure modes.
 
