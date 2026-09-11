@@ -1,145 +1,204 @@
 # terraloop-mode
 
-A [Pi](https://github.com/earendil-works/pi) extension that makes an agent
-orchestration protocol enforceable instead of advisory.
+A [Pi](https://github.com/earendil-works/pi) extension that turns an agent
+orchestration protocol into a tool-call gate. The agent cannot spawn a child,
+edit outside the locked scope, or declare the work finished until the protocol
+step that permits it has happened.
 
-## The problem
+## The Failure This Removes
 
-A "terraloop" is a simple orchestration protocol: lock a falsifiable contract,
-start a recurring driver, spawn bounded child agents, verify their output
-yourself, stop at a binary gate.
+A terraloop is a short protocol: lock a falsifiable contract, start a recurring
+driver, spawn bounded child agents, verify their output yourself, stop at a
+binary gate.
 
-Written as a skill, it is prose. Following it is a choice the agent re-makes every
-turn, and the failure is predictable: the agent skips the contract, does the work
-inline because that feels faster, and declares itself finished. Stronger wording
-does not fix this, because the instruction and the decision to follow it live in
-the same place.
+As a skill, the protocol is prose. The agent decides every turn whether to
+follow it. In practice it skipped the contract, did the work inline, and
+reported that the work was done. Stronger wording did not change this. The
+instruction and the decision to follow it lived in the same place.
 
-This extension moves the mechanical parts off that path. Pi's `tool_call` hook can
-block a call, and its return value is not something the model can argue with. So
-the ordering of the protocol becomes a state machine, and skipping a step becomes
-a blocked tool call with a reason.
+Pi's `tool_call` hook can block a call and return a reason. The model cannot
+argue with that return value. This extension moves the ordering of the protocol
+into that hook. A skipped step becomes a blocked tool call with a recorded
+reason.
 
-## Quick start
+## Quick Start
 
 ```sh
-pi install git:github.com/acoyfellow/terraloop-mode@2026.7.30
+pi install git:github.com/acoyfellow/terraloop-mode@2026.8.14
 ```
 
-Then just ask for a loop:
+Ask for a loop in plain language:
 
 ```
 Run a terraloop to get every open MR to zero must-fix objections.
 ```
 
-The agent arms the gate itself and is then held to the order: draft Goal / Gate /
-Scope / Proof and wait for your go, lock the contract, create a driver loop, and
-only then spawn children. Each step is enforced, not requested.
+The agent arms the gate by calling `terraloop_control action=arm` with a
+`northStar`. The gate then holds it to this order:
 
-`/terraloop` arms it explicitly if you prefer. `/terraloop-off` clears the active
-gate at any time and is the only way out. It keeps the last completed contract
-and gate receipt so a review can run after release.
+1. Draft Goal, Gate, Scope, and Proof. Wait for your one-word go.
+2. Lock the contract.
+3. Create the driver loop.
+4. Do in-scope work in the parent. Spawn a child only for a named reason.
+5. Call `action=gate`. The tool runs the proof command. Exit 0 ends the loop.
 
-## Arming and releasing are not symmetric
+`/terraloop` arms the gate from the command line. `/terraloop-off` leaves the
+mode. Only the user can run it.
 
-Either the user or the agent can start a loop. Only the user can end one.
+## Arming And Releasing
+
+Either side can start a loop. Only the user can end one.
 
 ```
-/terraloop <optional north star>   arm the gate yourself
-/terraloop-status                  show phase, contract, override
+/terraloop <optional north star>   arm the gate
+/terraloop-status                  show phase, contract, override, settle ticks
 /terraloop-off                     leave terraloop mode
 ```
 
-When you ask for a loop in plain language, the agent arms it by calling
-`terraloop_control action=arm` with a `northStar` describing what the loop is
-for. That is a deliberate, recorded act, and the audit log distinguishes
-`via: agent-tool` from `via: slash-command`. Asking is already explicit consent,
-so requiring a slash command added ceremony without adding a decision.
+The agent-facing tool has an `arm` action and no `release` action. The audit
+log records `via: agent-tool` or `via: slash-command` for every arm.
 
-What is deliberately absent is any **regex over prompt wording**. Guessing intent
-from phrases like "go hard on this" would put the decision back on the fuzzy path
-this extension exists to remove. A tool call is not a guess.
+The extension does not match prompt wording. A phrase such as "go hard on this"
+does not arm anything. A tool call arms the gate. `tests/arming.test.ts` asserts
+both facts.
 
-Releasing has no tool action at all. Escaping a gate must not require the thing
-the gate constrains, and a stuck agent clearing its own contract is exactly the
-failure being prevented. `/terraloop-off` belongs to the operator.
+Release has no tool action because a stuck agent that clears its own contract is
+the failure the gate exists to prevent.
 
-Both arming paths inject the same on-ramp, so the agent is told to draft the
-contract and wait for a one-word go before locking.
-
-## What it enforces
+## What Each Phase Blocks
 
 | Phase | Entered by | Blocked |
 | --- | --- | --- |
 | `off` | default | nothing |
 | `armed` | `/terraloop`, or `action=arm` with a north star | terrarium spawns, inline mutation, and driver creation until the contract is complete |
-| `driving` | creating the driver loop with a locked contract | any path outside the locked scope. In-scope parent `edit` / `write` / mutating `bash` is allowed. Terrarium still needs a named lever. |
-| `gated` | `terraloop_control action=gate`, after its proof command passes | new driver loops and further inline mutation |
+| `driving` | `loops_task create` with a locked contract | writes to any path outside the locked scope, and any spawn whose `cwd` is outside it |
+| `gated` | `action=gate`, after the proof command exits 0 | new driver loops and further inline mutation |
 
-Read-only tools are never blocked in any phase. `gated` deliberately still allows
-spawns, so a loop that has reached its gate can finish verifying rather than
-deadlocking.
+Read-only tools are never blocked. `gated` still allows spawns so a loop at its
+gate can finish verifying instead of deadlocking.
 
-## The four mechanical rules
+Four rules are mechanical:
 
-1. No child is spawned before a contract with goal, gate, scope, and proof exists.
-2. No child is spawned without a driver loop, so orchestration cannot happen
-   without the recurring driver that reaps and re-steers it.
-3. While driving, the parent is the default worker. Terrarium is a lever, not the default. A child cannot be granted a wider cwd than the locked scope.
-4. The gate cannot be self-certified. `action=gate` extracts a runnable command
-   from the contract's `proof` field and runs it; a non-zero exit refuses the
-   gate. An agent cannot simply declare the work finished.
+1. No child spawns before a contract with goal, gate, scope, and proof exists.
+2. No child spawns without a driver loop.
+3. While driving, the parent is the default worker. A child cannot receive a
+   wider `cwd` than the locked scope.
+4. The gate is not self-certified. `action=gate` runs the contract's proof
+   command. A non-zero exit refuses the gate.
+
+## Settle Ticks
+
+`loops_task` re-injects the driver prompt on an interval, and only while Pi is
+idle. Before this change, every driving turn ended the same way: the agent
+settled, Pi went idle, and the loop waited out the rest of the interval. The
+heartbeat was doing the job of a callback.
+
+Pi emits `agent_settled` once it will not retry, compact, or continue on its
+own. While the phase is `driving`, the extension handles that event by
+delivering the driver prompt again as a follow-up message. The interval driver
+remains as the recovery path.
+
+A settle tick is delivered only when all of these are true:
+
+- the phase is `driving`, the contract is complete, and the driver id and prompt
+  were captured when `loops_task create` ran;
+- Pi is idle and no follow-up is already queued;
+- the run that just settled made at least one tool call;
+- fewer than 100 settle ticks have fired in this loop.
+
+A turn that settles without a tool call does not fire a tick. That case belongs
+to the heartbeat, so a loop cannot spin on a model that only talks. `loops_task
+delete` or `clear` drops the captured driver and stops settle ticks. Every
+delivery and every skip is appended to the audit log as `settle-tick-delivered`
+or `settle-tick-skipped` with a reason.
+
+```sh
+bun run prove:settle
+```
+
+The proof launches a headless `pi -p --no-session` with a harness extension
+that seeds a `driving` state for the new session. The first prompt asks for one
+`bash` call. The proof then checks:
+
+- two agent runs happened;
+- exactly one `settle-tick-delivered` was recorded for that session;
+- the model answered the tick with `TERRALOOP_TICK_OK` in the second run;
+- the second run was skipped with `no tool calls`;
+- the persisted `settleTicks` is `1`.
+
+Field data from one operator's machine, `~/.terrarium/terraloop-audit.jsonl`,
+2026-09-08 through 2026-09-11: 142 settle ticks delivered across 10 sessions,
+311 skipped. The skip reasons were `no driver loop is recorded` (119), `settled
+run made no tool calls` (92), `phase is armed` (60), `phase is gated` (31), and
+`no driver prompt was captured` (9). No skip reason fell outside the decision
+table in `settle.ts`.
+
+`src/turn-exhaustion.ts` and `features/turn-exhaustion.feature` describe the
+protocol side of the same problem: while an in-scope step remains, the agent
+finishes it in the current turn instead of yielding to the heartbeat. The settle
+tick covers the case where the agent yields anyway.
 
 ## Override
 
-`driving` already allows in-scope parent work. Override is not the default
-road. Use it only for a genuine exception: a path outside the locked scope, or
-work after the stop gate.
+`driving` already allows in-scope parent work. Override exists for two
+exceptions: a path the contract omitted, and work after the stop gate.
 
 ```
 terraloop_control action=override reason="must edit a path the contract omitted" calls=2
 ```
 
-The reason must be at least 12 characters. Each grant covers at most 8 mutations
-and expires when they are used, and a loop gets **20 grants total**. Past that the
-override is refused.
+The reason must be at least 12 characters. One grant covers at most 8
+mutations. A loop gets 20 grants. The 21st request is refused.
 
-The old gate taxed every parent edit. That burned the budget on normal work and
-forced Terrarium for jobs that belonged in the parent. Do not put that tax back.
+An earlier gate taxed every parent edit. That spent the budget on normal work
+and pushed jobs into Terrarium that belonged in the parent. The current gate
+does not tax in-scope edits.
 
-`terraloop_control action=status` reports `delegated=N inline=N
-overrideGrants=N/20` so that ratio is visible while the loop runs, not
-archaeology afterward. Every grant, consumption, refusal, and block is appended to
-`~/.terrarium/terraloop-audit.jsonl`.
+`action=status` reports `delegated=N inline=N overrideGrants=N/20` while the
+loop runs.
+
+## Reaching The Gate
+
+When the agent believes the work is done it calls `action=gate`. The tool
+extracts one runnable command from the contract's `proof` field and runs it.
+Exit 0 moves the phase to `gated` and stores the command, output, and time as
+`gateReceipt`. Any other exit refuses the gate and the loop continues.
+
+A proof that does not reduce to one runnable command is refused. The string
+`bun test >= 77 pass` is rejected on purpose: a shell reads `>=` as a redirect,
+writes a file named `=`, and exits 0.
+
+An earlier build let the agent declare its own gate met. A loop mid-flight
+self-certified and locked itself down. Verification is now the tool's job.
 
 ## State
 
-Phase, contract, driver ID, proof receipt, and override live in a file keyed by
-the current Pi session: `~/.terrarium/terraloop-state/<session-id>.json`. State on
-disk rather than in context means the gate survives compaction. Session-keyed
-files let multiple Pi sessions run independent terraloops concurrently.
+Phase, contract, driver id, driver prompt, settle tick count, gate receipt, and
+override live in `~/.terrarium/terraloop-state/<session-id>.json`. State on disk
+survives context compaction. Session-keyed files let several Pi sessions run
+independent loops at the same time.
 
 `/terraloop-off` clears the active phase, contract, and driver. It keeps
-`lastCompletedLoop`. That record contains the completed contract, exact proof
-command, bounded proof output, child run IDs, counters, and release time. A later
-review can use this record without selecting another session or trusting chat
-history.
+`lastCompletedLoop`: the completed contract, the exact proof command, bounded
+proof output, child run ids, counters, and release time. A review can read that
+record without trusting chat history.
 
-The extension itself remains globally installed. Only its mutable gate state is
-session-scoped. The shared audit log includes `sessionId` on every new event so
-parallel loop histories remain attributable. A corrupt or missing session state
-file reads as `off`, so a damaged file cannot wedge another session.
+A missing or corrupt state file reads as `off`. A damaged file cannot wedge
+another session.
+
+Every allow, block, override, arm, release, gate, and settle tick is appended to
+`~/.terrarium/terraloop-audit.jsonl` with the `sessionId`.
 
 ## Install
 
 ```sh
-pi install git:github.com/acoyfellow/terraloop-mode@2026.7.30
+pi install git:github.com/acoyfellow/terraloop-mode@2026.8.14
 ```
 
-This is a Pi package: it ships the gate extension **and** the protocol skill the
-gate enforces, so the agent has something to follow when a call is blocked.
+The package ships the gate extension and the protocol skill it enforces, so the
+agent has text to follow when a call is blocked.
 
-To hack on it instead, clone and symlink:
+To work on the source:
 
 ```sh
 git clone https://github.com/acoyfellow/terraloop-mode.git
@@ -148,14 +207,14 @@ bun install
 ln -s "$PWD" ~/.pi/agent/extensions/terraloop-mode
 ```
 
-Start a new Pi session, or `/reload` an existing one, then confirm:
+Start a new Pi session or run `/reload`, then run `/terraloop-status`. The gate
+is inert until you arm it.
 
-```
-/terraloop-status
-```
-
-The gate is inert until you arm it. Installing changes nothing about a normal
-session.
+If you install with `pi install`, Pi checks out the pinned commit and resets the
+package directory on each reload. A local commit that is not pushed and not
+pinned in `~/.pi/agent/settings.json` is discarded on the next reload. This
+happened to the settle tick commit once on 2026-09-11 and was recovered from the
+reflog. Push, then move the pin.
 
 ## Develop
 
@@ -163,123 +222,70 @@ session.
 bun run check
 ```
 
-The suite covers every phase transition, tool classification for both read-only
-and mutating shell, scope containment, override consumption, disk round-trip, and
-malformed input. It includes a negative control: a permissive gate must fail the
-scenarios the real gate blocks, so a gate that silently stopped enforcing would
-not still look green. `tests/arming.test.ts` asserts that the agent-facing tool
-has no arm or release action and that no prompt regex arms the gate.
+`bun run check` runs `tsc --noEmit` and the test suite: 66 tests across six
+files as of `ee9bd6a`. The suite covers phase transitions, tool classification
+for read-only and mutating shell, scope containment, override consumption, disk
+round-trip, settle tick decisions, turn-exhaustion decisions, and malformed
+input. A negative control asserts that a permissive gate fails the scenarios the
+real gate blocks, so a gate that stopped enforcing would not still look green.
 
-## Verified against a live agent
-
-The suite is unit-level, so the gate was also exercised against separate `pi`
-processes with the extension loaded and the phase set to `armed`:
+The gate was also exercised against separate `pi` processes with the phase set
+to `armed`:
 
 | Probe | Result |
 | --- | --- |
 | "write this file, just do it" | blocked; file never created |
 | "arm a loop, then write this file" | armed itself, then blocked its own write |
 | "spawn a terrarium child, do it now" | blocked; contract demanded first |
-| lock a contract, then write | still blocked, because no driver loop exists |
-| override with a reason, then write | allowed once, then budget consumed |
-
-Every block and every override appears in the audit log.
-
-## Settle ticks: the driver advances when the turn ends
-
-A `loops_task` driver fires on an interval and only while Pi is idle. Without
-help, every driving turn ends the same way: the agent settles, Pi goes idle, and
-the loop waits out the rest of the interval before the next tick. The heartbeat
-was doing the job of a callback.
-
-Pi's `agent_settled` event fires once Pi will not retry, compact, or continue on
-its own. While the phase is `driving`, the extension uses that event to deliver
-the next driver tick immediately as a follow-up message carrying the same prompt
-the driver was created with. The interval driver stays as the recovery path.
-
-A settle tick fires only when all of these hold:
-
-- the phase is `driving`, the contract is complete, and a driver id and prompt
-  were captured when `loops_task create` ran;
-- Pi is idle and no follow-up is already queued;
-- the run that just settled made at least one tool call, so a turn where the
-  agent only talked hands the next tick back to the heartbeat instead of
-  spinning;
-- fewer than `settleTickBudget` (100) settle ticks have fired this loop.
-
-Deleting the driver with `loops_task delete` or `clear` drops the captured driver
-and stops settle ticks. Every delivery and every skip is written to the audit log
-as `settle-tick-delivered` or `settle-tick-skipped` with a reason.
-
-```sh
-bun run prove:settle
-```
-
-The proof launches a real headless `pi -p --no-session` with a harness that seeds
-a driving state, asks for one tool call, and checks that exactly one settle tick
-was delivered, that the model answered it in a second agent run, that the
-following tool-less run was skipped, and that the persisted `settleTicks` is 1.
-
-## Reaching the gate
-
-When the agent believes the work is done it calls `terraloop_control
-action=gate`. That extracts a runnable command from the contract's `proof` field
-and runs it. A non-zero exit refuses the gate and the loop continues.
-
-This is the part that cannot be talked past. An earlier build let the agent
-declare its own gate met, and a loop mid-flight self-certified and locked itself
-down. Verification is now the tool's job.
-
-A proof that cannot be reduced to one runnable command is refused rather than
-guessed at. Prose assertions like `bun test >= 77 pass` are rejected on purpose:
-the shell would read `>=` as a redirect, write a file called `=`, and exit zero,
-falsely passing the gate.
+| lock a contract, then write | still blocked; no driver loop existed |
+| override with a reason, then write | allowed once; budget consumed |
 
 ## Limits
 
-This constrains tool calls. It does not constrain judgment. It can force a
-contract to be locked and a driver to exist before children are spawned; it
-cannot make the contract good or the verification real. Enforcement raises the
-cost of skipping a step and leaves a record when a step is skipped. It is not a
-security boundary: an agent with shell access can edit the state file or this
-extension.
+This gate constrains tool calls. It does not constrain judgment. It can force a
+contract and a driver to exist before a child spawns. It cannot make the
+contract good or the proof meaningful.
 
-Tool names are matched literally. If `terrarium` or the loop extension renames a
-tool, the gate stops recognizing it. `tests/tool-names.test.ts` pins the names
-that must classify as spawns so a rename fails the suite instead of silently
-disabling the gate.
+It is not a security boundary. An agent with shell access can edit the state
+file or this extension. See [SECURITY.md](SECURITY.md).
 
-The mutating-shell classifier is a pattern list, not a shell parser. It catches
-ordinary mutation commands and redirects; a sufficiently creative one-liner is not
-modelled. This is a workflow gate, not a sandbox. See [SECURITY.md](SECURITY.md).
+Tool names are matched literally. If `terrarium` or `loops_task` renames a tool,
+the gate stops recognizing it. `tests/tool-names.test.ts` pins the spawn tool
+names so a rename fails the suite.
+
+The mutating-shell classifier is a pattern list. It catches ordinary mutation
+commands and redirects. It does not parse shell.
+
+Settle ticks depend on the driver prompt being captured at `loops_task create`.
+A driver created by an older version of this extension has no captured prompt,
+so that loop runs on the heartbeat only.
 
 ## Requirements
 
 - Pi >= 0.82
 - [Bun](https://bun.sh) for development
-- For an actual loop: the `terrarium` MCP server for spawning children, and a
-  `loops_task` provider for the recurring driver. The gate itself works without
-  them; it simply has nothing to gate.
+- For a live loop: the `terrarium` MCP server for children, and a `loops_task`
+  provider for the driver. The gate loads without them and has nothing to gate.
 
 ## Layout
 
 ```
-extension.ts          Pi wiring: slash commands, tool, tool_call gate
-gate.ts               classifies each tool call and decides allow/block
-state.ts              per-session phase and contract, persisted to disk
-proof.ts              extracts and runs the contract's proof command
-settle.ts             decides whether a settled turn delivers the next driver tick
-scripts/              headless pi proofs, including prove-settle-tick.mjs
-skills/terraloop/     the protocol the gate enforces
-tests/                phase transitions, classification, negative control
+extension.ts                Pi wiring: slash commands, tool, tool_call gate, agent_settled hook
+gate.ts                     classifies each tool call and decides allow or block
+state.ts                    per-session phase, contract, driver, and receipt on disk
+proof.ts                    extracts and runs the contract's proof command
+settle.ts                   decides whether a settled turn delivers the next driver tick
+src/turn-exhaustion.ts      protocol decision table for staying in the current turn
+features/                   Gherkin for the turn-exhaustion paths
+scripts/                    headless pi proofs, including prove-settle-tick.mjs
+skills/terraloop/           the protocol the gate enforces
+tests/                      phase transitions, classification, settle, negative control
 ```
 
 ## Versioning
 
-Releases are date tags (`2026.7.30`), because `pi install` pins a git ref rather
-than resolving a `package.json` range. The tag tells you how stale your pin is,
-which is the only question a git-installed extension raises. The version field
-stays `0.0.1`.
+Releases are date tags such as `2026.8.14`. `pi install` pins a git ref, so the
+tag shows how stale a pin is. The `package.json` version stays `0.0.1`.
 
 ## License
 
