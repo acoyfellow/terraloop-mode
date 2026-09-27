@@ -1,0 +1,6 @@
+name = "dry"
+[[lean_lib]]
+name = "Claims"
+[[lean_lib]]
+name = "Proofs"
+globs = ["Proofs.+"]

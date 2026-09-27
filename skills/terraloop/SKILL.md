@@ -126,6 +126,70 @@ If the north star lives in a project file (e.g. a repo whose loop contract says
 "Follow .context/TERRALOOP.md"), read that file for the Goal and Gate instead of
 asking. It is already the customized instance.
 
+## Lean gate
+
+Use a Lean gate when the goal is a formal claim: a property of a pure
+function, a decision rule, or an invariant you can state in Lean. The Lean
+kernel is the judge. The agent can write the proof. It cannot make the kernel
+accept a wrong one.
+
+Do not use a Lean gate for goals that Lean cannot state, such as "the deploy
+works" or "the endpoint returns 200".
+
+### Layout
+
+```text
+Claims.lean      each claim as a named Prop: def Claim.x : Prop := ...
+Check.lean       example : Claim.x := x, then #print axioms x
+Proofs/          the proofs. The only files the loop writes.
+lakefile.toml    [[lean_lib]] Claims, and Proofs with globs = ["Proofs.+"]
+lean-toolchain   the pinned Lean version
+lean-gate.lock   sha256 of Claims.lean, Check.lean, lakefile.toml, lean-toolchain
+```
+
+Create the lock before you lock the contract. The lock is required.
+
+```sh
+shasum -a 256 Claims.lean Check.lean lakefile.toml lean-toolchain > lean-gate.lock
+```
+
+### Contract
+
+- **Scope** is `Proofs/` and `.lake/`. Keep every pinned file and
+  `lean-gate.lock` outside the scope. The loop can then not weaken a claim.
+- **Gate** is `sh <skill-dir>/lean-gate.sh <project>` exits 0. Every
+  `def Claim.<name> : Prop` in `Claims.lean` is a required theorem `<name>`.
+- **Proof** is the gate output. It lists the axioms of each theorem.
+
+### What lean-gate.sh checks
+
+1. `lean-gate.lock` exists, and all four pinned files match it. A missing
+   lock fails.
+2. No file in `Proofs/` contains `set_option`. An option such as
+   `debug.skipKernelTC` can turn off the kernel check.
+3. `Check.lean` has `example : Claim.<name> := <name>` and
+   `#print axioms <name>` for every claim. A skipped claim fails.
+4. `lake build Claims Proofs` succeeds.
+5. `Check.lean` type-checks. A weakened statement fails here.
+6. `#print axioms` for each theorem shows only `propext`, `Classical.choice`,
+   and `Quot.sound`.
+
+Check 6 catches `sorry`, a hidden `sorryAx`, an added `axiom`, and
+`native_decide`. Do not grep for `sorry` or `axiom`. A grep misses a hidden
+`sorryAx` and `native_decide`.
+
+`lean-gate.test.sh` runs the gate on sixteen fixtures: three honest projects
+and thirteen cheats. Run it after you change `lean-gate.sh`.
+
+### Tips
+
+- A claim wrapped as `def Claim.x : Prop` is opaque to `decide` and `simp`.
+  Start the proof with `unfold Claim.x` or `intro`.
+- Read the Lean error after each failed build. It is the feedback for the next
+  attempt.
+- Report **proven** for the Lean model only. Report **linked** only when a
+  differential test shows that the real code agrees with the Lean definitions.
+
 ## What the gate does not do
 
 It constrains tool calls, not judgment. It can force a contract to exist and a
