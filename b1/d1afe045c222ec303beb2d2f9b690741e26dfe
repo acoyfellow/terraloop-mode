@@ -1,0 +1,85 @@
+skills/terraloop/SKILL.md
+  s_fc002e6ac2c2f5::t_e5c56fe69cc07a 129-192
+skills/terraloop/lean-gate-fixtures/cases/fail-axiom/Proofs/Honest.lean
+  s_1edf569f022c1c::t_4d8ae3a1bc2ea5 1-2
+skills/terraloop/lean-gate-fixtures/cases/fail-check-skips-claim/Claims.lean
+  s_1edf569f022c1c::t_7480aff42700c0 1-6
+skills/terraloop/lean-gate-fixtures/cases/fail-check-skips-claim/Proofs/Honest.lean
+  s_1edf569f022c1c::t_d537ce513d7afc 1-4
+skills/terraloop/lean-gate-fixtures/cases/fail-edit-claim/Claims.lean
+  s_1edf569f022c1c::t_0cf317a26900e2 1-4
+skills/terraloop/lean-gate-fixtures/cases/fail-edit-claim/Proofs/Honest.lean
+  s_1edf569f022c1c::t_6cf6584390c6d0 1-2
+skills/terraloop/lean-gate-fixtures/cases/fail-helper-axiom/Proofs/Honest.lean
+  s_1edf569f022c1c::t_6b759bd0f1286d 1-3
+skills/terraloop/lean-gate-fixtures/cases/fail-hidden-sorry/Proofs/Honest.lean
+  s_1edf569f022c1c::t_986986f6d82041 1-2
+skills/terraloop/lean-gate-fixtures/cases/fail-lakefile-edit/Proofs/Honest.lean
+  s_1edf569f022c1c::t_bd72344a23e257 1-4
+skills/terraloop/lean-gate-fixtures/cases/fail-lakefile-edit/lakefile.toml
+  s_1edf569f022c1c::t_7b732e7418ee8f 1-9
+skills/terraloop/lean-gate-fixtures/cases/fail-native-decide/Proofs/Honest.lean
+  s_1edf569f022c1c::t_716631fc25aedd 1-4
+skills/terraloop/lean-gate-fixtures/cases/fail-no-lock/Proofs/Honest.lean
+  s_1edf569f022c1c::t_26c7a4200faf39 1-4
+skills/terraloop/lean-gate-fixtures/cases/fail-redefine/Proofs/Honest.lean
+  s_1edf569f022c1c::t_65f41aecb5b0a4 1-3
+skills/terraloop/lean-gate-fixtures/cases/fail-set-option/Proofs/Honest.lean
+  s_1edf569f022c1c::t_a3c9729be0eaf7 1-5
+skills/terraloop/lean-gate-fixtures/cases/fail-sorry/Proofs/Honest.lean
+  s_1edf569f022c1c::t_bbb5153bb7f0a8 1-2
+skills/terraloop/lean-gate-fixtures/cases/fail-toolchain-edit/Proofs/Honest.lean
+  s_1edf569f022c1c::t_91b704c1002078 1-4
+skills/terraloop/lean-gate-fixtures/cases/fail-toolchain-edit/lean-toolchain
+  s_1edf569f022c1c::t_a960a973df6814 1
+skills/terraloop/lean-gate-fixtures/cases/fail-weaken/Proofs/Honest.lean
+  s_1edf569f022c1c::t_f6a051cb3ad56e 1-2
+skills/terraloop/lean-gate-fixtures/cases/pass-classical/Proofs/Honest.lean
+  s_1edf569f022c1c::t_0ba5b4153eef4b 1-4
+skills/terraloop/lean-gate-fixtures/cases/pass-honest/Proofs/Honest.lean
+  s_1edf569f022c1c::t_bf861f75d8ce8a 1-4
+skills/terraloop/lean-gate-fixtures/cases/pass-toy/.theorems
+  s_1edf569f022c1c::t_ca33ae089f5a9c 1
+skills/terraloop/lean-gate-fixtures/cases/pass-toy/Check.lean
+  s_1edf569f022c1c::t_7902fb481e1d86 1-8
+skills/terraloop/lean-gate-fixtures/cases/pass-toy/Claims.lean
+  s_1edf569f022c1c::t_b7e8ace59eb76e 1-3
+skills/terraloop/lean-gate-fixtures/cases/pass-toy/Proofs/Honest.lean
+  s_1edf569f022c1c::t_3961c6f09fc7b6 1-18
+skills/terraloop/lean-gate-fixtures/project/Check.lean
+  s_1edf569f022c1c::t_f39abe35d65b5f 1-4
+skills/terraloop/lean-gate-fixtures/project/Claims.lean
+  s_1edf569f022c1c::t_97cdf441392ad2 1-4
+skills/terraloop/lean-gate-fixtures/project/lakefile.toml
+  s_1edf569f022c1c::t_2b0b5ffbd79187 1-6
+skills/terraloop/lean-gate-fixtures/project/lean-toolchain
+  s_1edf569f022c1c::t_9727d04099ec64 1
+skills/terraloop/lean-gate.sh
+  s_1edf569f022c1c::t_c99a6a68012541 1-96
+skills/terraloop/lean-gate.test.sh
+  s_fc002e6ac2c2f5::t_685c78d4ff4b81 1-63
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "b1d1afe045c222ec303beb2d2f9b690741e26dfe",
+  "prompts": {},
+  "sessions": {
+    "s_1edf569f022c1c": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a0df3d-f9fc-74ea-ae36-1d244e193f8b",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Jordan Coeyman <coeyman@gmail.com>"
+    },
+    "s_fc002e6ac2c2f5": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a0aab9-f490-72e1-8d73-920246e8faec",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Jordan Coeyman <coeyman@gmail.com>"
+    }
+  }
+}
