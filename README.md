@@ -278,7 +278,10 @@ settle.ts                   decides whether a settled turn delivers the next dri
 src/turn-exhaustion.ts      protocol decision table for staying in the current turn
 features/                   Gherkin for the turn-exhaustion paths
 scripts/                    headless pi proofs, including prove-settle-tick.mjs
-skills/terraloop/           the protocol the gate enforces
+skills/terraloop/           the protocol the gate enforces, plus the Lean gate
+skills/terraloop-review/    adversarial review of the last loop
+skills/terraloop-reviews/   GitLab merge-request review loop with an API gate
+skills/terraloop-factory/   GitHub issue-to-PR loop with a PR and test gate
 tests/                      phase transitions, classification, settle, negative control
 ```
 
