@@ -1,0 +1,45 @@
+skills/terraloop-factory/SKILL.md
+  s_cad21ecb728adb::t_1e64efda62ea47 1-83
+skills/terraloop-factory/gate.sh
+  s_9543e9b013f284::t_b821a9de269695 1-62
+skills/terraloop-review/SKILL.md
+  s_1edf569f022c1c::t_0dfa604de198f7 1-71
+skills/terraloop-review/scripts/gather.mjs
+  s_1edf569f022c1c::t_7b8d273240cbf7 1-132
+skills/terraloop-reviews/SKILL.md
+  s_9543e9b013f284::t_e309240d3aee48 1-96
+skills/terraloop-reviews/gate.sh
+  s_1edf569f022c1c::t_6740bdcb5a29b0 1-57
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "34152ac67ddef0b83c246aa64a41c4a9fca21c16",
+  "prompts": {},
+  "sessions": {
+    "s_1edf569f022c1c": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a0df3d-f9fc-74ea-ae36-1d244e193f8b",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Jordan Coeyman <coeyman@gmail.com>"
+    },
+    "s_9543e9b013f284": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "019e27e9-dbc8-74d4-83bf-3b7f2697402e",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Jordan Coeyman <coeyman@gmail.com>"
+    },
+    "s_cad21ecb728adb": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "019eb430-11fe-7acf-8326-0dbeb9469573",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Jordan Coeyman <coeyman@gmail.com>"
+    }
+  }
+}
