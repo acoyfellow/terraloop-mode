@@ -1,0 +1,27 @@
+README.md
+  s_5f86db03525984::t_7290596946dc1c 174-195
+evidence-screen.ts
+  s_5f86db03525984::t_de1ccc769abd6a 1-99
+extension.ts
+  s_5f86db03525984::t_a4e748df200ec0 18,140,146,151
+state.ts
+  s_5f86db03525984::t_c7d2136d9176a6 1,26
+tests/evidence-screen.test.ts
+  s_5f86db03525984::t_1b3633d89865f0 1-51
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "2db5b3f57e89c55cf6d36e1bb8aba1b56a5f8666",
+  "prompts": {},
+  "sessions": {
+    "s_5f86db03525984": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a0f8ed-6d1c-75dc-a1fe-8dce6a49abbc",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Jordan Coeyman <coeyman@gmail.com>"
+    }
+  }
+}
