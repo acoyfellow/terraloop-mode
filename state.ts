@@ -1,3 +1,4 @@
+import type { EvidenceScreen } from "./evidence-screen.ts";
 import { mkdirSync, readFileSync, writeFileSync, appendFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { homedir } from "node:os";
@@ -22,6 +23,7 @@ export type GateReceipt = {
   exitCode: 0;
   output: string;
   verifiedAt: string;
+  evidenceScreen?: EvidenceScreen;
 };
 
 export type CompletedLoop = {

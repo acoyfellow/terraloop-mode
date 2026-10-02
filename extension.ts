@@ -15,6 +15,7 @@ import {
   type LoopState,
 } from "./state.ts";
 import { verifyProof } from "./proof.ts";
+import { describeScreen, screenEvidence, type ClassifierLike } from "./evidence-screen.ts";
 import { settleTickDecision, settleTickMessage } from "./settle.ts";
 
 const controlParameters = Type.Object({
@@ -136,16 +137,18 @@ export default function terraloopMode(pi: ExtensionAPI) {
             : `the proof command failed with exit ${proof.exitCode}.\n\n$ ${proof.command}\n${proof.output}`;
         return text(`Gate refused: ${detail}`);
       }
+      const screen = await screenEvidence(ctx.modelRegistry as unknown as ClassifierLike, state.contract.gate, proof.output);
       const gateReceipt = {
         command: proof.command,
         exitCode: 0 as const,
         output: proof.output,
         verifiedAt: new Date().toISOString(),
+        evidenceScreen: screen,
       };
       const next = writeSessionState(ctx, { ...state, phase: "gated", gateReceipt });
       recordSessionAudit(ctx, { event: "gate-reached", command: proof.command, contract: state.contract, gateReceipt });
       return text(
-        `Gate verified by running the contract's proof.\n\n$ ${proof.command}\n${proof.output}\n\n${describeState(next)}\n\nDelete the driver loop with loops_task action=delete, then report what is proven and what remains. The user leaves terraloop with /terraloop-off.`,
+        `Gate verified by running the contract's proof.\n\n$ ${proof.command}\n${proof.output}\n\n${describeScreen(screen)}\n\n${describeState(next)}\n\nDelete the driver loop with loops_task action=delete, then report what is proven and what remains. The user leaves terraloop with /terraloop-off.`,
       );
     },
   });

@@ -171,6 +171,28 @@ writes a file named `=`, and exits 0.
 An earlier build let the agent declare its own gate met. A loop mid-flight
 self-certified and locked itself down. Verification is now the tool's job.
 
+### Evidence screen (advisory)
+
+A proof can exit 0 and still not show the gate. Examples: a script that prints
+`PASS` for a check whose detail shows a failure, or a proof that prints nothing.
+When the [odds](https://github.com/acoyfellow/odds) extension is installed, the
+gate also asks `odds/clef` one yes/no question: does the raw output show the
+gate condition holds?
+
+- Self-reported fields (`pass`, `ok`, `verdict`, `name`, `claim`, ...) and
+  `PASS`/`FAIL` line prefixes are removed first. Clef judges the raw evidence,
+  not the proof's own verdict.
+- At p >= 0.8 the screen says the output supports the gate. Below 0.8 it prints
+  a warning. The result is stored as `gateReceipt.evidenceScreen`.
+- It is advisory. The exit code still decides the gate. A missing model, a
+  missing token, or a classifier error skips the screen. It never blocks the
+  gate and never passes a failing proof.
+
+Measured in odds receipts 005 and 007: with labels kept, Clef accepted a forged
+`pass: true` receipt at 0.93. With labels removed, it accepted both real
+receipts (0.91 and 0.93) and rejected all four forgeries (0.07 or lower), with
+identical scores over three runs. That is six planted cases, not a benchmark.
+
 ## State
 
 Phase, contract, driver id, driver prompt, settle tick count, gate receipt, and
