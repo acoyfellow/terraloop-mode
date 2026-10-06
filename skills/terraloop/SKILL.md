@@ -156,7 +156,10 @@ shasum -a 256 Claims.lean Check.lean lakefile.toml lean-toolchain > lean-gate.lo
 ### Contract
 
 - **Scope** is `Proofs/` and `.lake/`. Keep every pinned file and
-  `lean-gate.lock` outside the scope. The loop can then not weaken a claim.
+  `lean-gate.lock` outside the scope. Scope blocks `edit`, `write`, and shell
+  writes to absolute paths. It cannot see every shell write, for example a
+  relative path or a write inside a script. **The lock is the protection.** A
+  changed claim fails the gate even when scope missed the write.
 - **Gate** is `sh <skill-dir>/lean-gate.sh <project>` exits 0. Every
   `def Claim.<name> : Prop` in `Claims.lean` is a required theorem `<name>`.
 - **Proof** is the gate output. It lists the axioms of each theorem.

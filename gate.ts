@@ -32,6 +32,45 @@ export function pathIsInScope(path: string, scope: readonly string[]): boolean {
   return scope.some((entry) => path.startsWith(entry));
 }
 
+const shellWriteVerbs = /^(rm|mv|cp|install|mkdir|touch|tee|truncate|chmod|chown|ln|patch)$/;
+const shellInPlaceEdit = /^(sed|perl)$/;
+
+function expandHome(token: string, home: string): string {
+  return token.startsWith("~/") ? `${home}/${token.slice(2)}` : token;
+}
+
+function stripQuotes(token: string): string {
+  return token.replace(/^['"]|['"]$/g, "");
+}
+
+export function shellWriteTargets(command: string, home: string): string[] {
+  const targets: string[] = [];
+  for (const match of command.matchAll(/>>?\s*([^\s;&|]+)/g)) {
+    targets.push(expandHome(stripQuotes(match[1] ?? ""), home));
+  }
+  for (const segment of command.split(/&&|\|\||[;|\n]/)) {
+    const words = segment.trim().split(/\s+/).map(stripQuotes).filter((word) => word.length > 0);
+    const verb = words[0] ?? "";
+    const inPlace = shellInPlaceEdit.test(verb) && words.some((word) => /^-[a-zA-Z]*i/.test(word));
+    if (!shellWriteVerbs.test(verb) && !inPlace) continue;
+    for (const word of words.slice(1)) {
+      if (word.startsWith("-")) continue;
+      const path = expandHome(word, home);
+      if (path.startsWith("/")) targets.push(path);
+    }
+  }
+  return targets.filter((path) => path.startsWith("/") && path !== "/dev/null" && !path.startsWith("/dev/fd/"));
+}
+
+export function outOfScopeShellWrite(input: unknown, scope: readonly string[], home: string): string | null {
+  const command = (input as { command?: unknown } | null)?.command;
+  if (typeof command !== "string") return null;
+  for (const path of shellWriteTargets(command, home)) {
+    if (!pathIsInScope(path, scope)) return path;
+  }
+  return null;
+}
+
 export function spawnTargetPaths(input: unknown): string[] {
   if (!input || typeof input !== "object") return [];
   const record = input as { cwd?: unknown; jobs?: unknown };

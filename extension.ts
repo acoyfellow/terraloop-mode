@@ -1,7 +1,8 @@
+import { homedir } from "node:os";
 import { Type } from "typebox";
 import { StringEnum } from "@earendil-works/pi-ai";
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
-import { classifyTool, consumeOverride, evaluate, outOfScopeSpawnPath, pathIsInScope, requestOverride } from "./gate.ts";
+import { classifyTool, consumeOverride, evaluate, outOfScopeShellWrite, outOfScopeSpawnPath, pathIsInScope, requestOverride } from "./gate.ts";
 import {
   contractIsComplete,
   describeState,
@@ -286,6 +287,13 @@ export default function terraloopMode(pi: ExtensionAPI) {
       if (typeof path === "string" && pathIsInScope(path, state.contract.scope) === false) {
         recordSessionAudit(ctx, { event: "blocked", toolName: event.toolName, intent, phase: state.phase, detail: "path outside locked scope" });
         return { block: true, reason: `terraloop scope violation: ${path} is outside the locked scope (${state.contract.scope.join(", ")}).` };
+      }
+      if (event.toolName === "bash") {
+        const target = outOfScopeShellWrite(event.input, state.contract.scope, homedir());
+        if (target) {
+          recordSessionAudit(ctx, { event: "blocked", toolName: event.toolName, intent, phase: state.phase, detail: "shell write outside locked scope" });
+          return { block: true, reason: `terraloop scope violation: this command writes ${target}, which is outside the locked scope (${state.contract.scope.join(", ")}).` };
+        }
       }
     }
 
