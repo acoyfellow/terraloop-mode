@@ -128,6 +128,10 @@ tool call rather than left to the agent's discretion.
    - DELETE the loop the moment its terminal/stop condition is met (the driver
      prompt must say so), so it does not spin against a satisfied or human-gated
      gate.
+   - Create the driver only after `lock`, so the extension records its ID.
+     `/terraloop-off` stops every loop the session created and did not delete.
+     If a driver tick arrives and `terraloop_control action=status` shows
+     `off`, the user stopped the loop: delete the driver and do not work.
 
 Pattern: `loops_task` create the driver. **This turn** does the next cheap
 in-scope step until the turn is exhausted. If a completion callback arrives,

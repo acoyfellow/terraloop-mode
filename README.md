@@ -52,8 +52,14 @@ Either side can start a loop. Only the user can end one.
 ```
 /terraloop <optional north star>   arm the gate
 /terraloop-status                  show phase, contract, override, settle ticks
-/terraloop-off                     leave terraloop mode
+/terraloop-off                     leave terraloop mode and stop its driver loops
 ```
+
+`/terraloop-off` also stops every `loops_task` loop that this session created
+and did not delete, including the recorded driver. It sends `loops:stop` on
+the Pi extension event bus, and the `loops-yaml` Pi extension stops the loop.
+With an older `loops-yaml` that does not listen for `loops:stop`, delete the
+driver yourself with `loops_task action=delete`.
 
 The agent-facing tool has an `arm` action and no `release` action. The audit
 log records `via: agent-tool` or `via: slash-command` for every arm.

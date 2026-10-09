@@ -30,6 +30,17 @@ const controlParameters = Type.Object({
   calls: Type.Optional(Type.Number({ description: "How many inline mutations the override covers. Default 1." })),
 });
 
+const LOOPS_STOP_EVENT = "loops:stop";
+
+export function createdLoopId(serializedResult: string): string | null {
+  return (
+    serializedResult.match(/\b(?:loop|task)[-_ ]?id["':\s]+([A-Za-z0-9_-]{4,})/i)?.[1] ??
+    serializedResult.match(/\bid["':\s]+([A-Za-z0-9_-]{6,})/)?.[1] ??
+    serializedResult.match(/Created ([0-9a-f]{8}) every/)?.[1] ??
+    null
+  );
+}
+
 function text(body: string) {
   return { content: [{ type: "text" as const, text: body }], details: undefined };
 }
@@ -176,18 +187,26 @@ export default function terraloopMode(pi: ExtensionAPI) {
     },
   });
 
+  const loopsSeenThisSession = new Set<string>();
+
   pi.registerCommand("terraloop-off", {
-    description: "Leave terraloop mode in this Pi session and clear its gate",
+    description: "Leave terraloop mode in this Pi session, stop its driver loops, and clear its gate",
     handler: async (_args, ctx) => {
       const previous = readSessionState(ctx);
+      const loopsToStop = new Set(loopsSeenThisSession);
+      if (previous.driverLoopId) loopsToStop.add(previous.driverLoopId);
+      for (const id of loopsToStop) pi.events.emit(LOOPS_STOP_EVENT, { id });
+      loopsSeenThisSession.clear();
       const released = writeSessionState(ctx, releaseState(previous));
       recordSessionAudit(ctx, {
         event: "release",
         via: "slash-command",
         previousPhase: previous.phase,
+        stoppedLoops: [...loopsToStop],
         lastCompletedLoop: released.lastCompletedLoop,
       });
-      ctx.ui.notify(`terraloop off in this session (was ${previous.phase})`, "info");
+      const stopped = loopsToStop.size ? `; stopped loops ${[...loopsToStop].join(", ")}` : "";
+      ctx.ui.notify(`terraloop off in this session (was ${previous.phase})${stopped}`, "info");
     },
   });
 
@@ -209,14 +228,23 @@ export default function terraloopMode(pi: ExtensionAPI) {
   });
 
   pi.on("tool_result", (event, ctx) => {
+    const intent = classifyTool(event.toolName, event.input);
+    const serialized = JSON.stringify(event.details ?? "") + JSON.stringify(event.content ?? "");
+    if (intent === "driver-create") {
+      const createdId = createdLoopId(serialized);
+      if (createdId) loopsSeenThisSession.add(createdId);
+    }
+    if (intent === "driver-delete") {
+      const input = event.input as { action?: unknown; id?: unknown } | null;
+      if (input?.action === "clear") loopsSeenThisSession.clear();
+      else if (typeof input?.id === "string") loopsSeenThisSession.delete(input.id);
+    }
     const state = readSessionState(ctx);
     if (state.phase === "off") return undefined;
-    const intent = classifyTool(event.toolName, event.input);
     if (intent !== "driver-create" && intent !== "driver-delete" && intent !== "spawn") return undefined;
 
-    const serialized = JSON.stringify(event.details ?? "") + JSON.stringify(event.content ?? "");
     if (intent === "driver-create" && state.driverLoopId === null) {
-      const loopId = serialized.match(/\b(?:loop|task)[-_ ]?id["':\s]+([A-Za-z0-9_-]{4,})/i)?.[1] ?? serialized.match(/\bid["':\s]+([A-Za-z0-9_-]{6,})/)?.[1] ?? null;
+      const loopId = createdLoopId(serialized);
       const prompt = (event.input as { prompt?: unknown } | null)?.prompt;
       const driverPrompt = typeof prompt === "string" && prompt.trim().length > 0 ? prompt.trim() : null;
       if (loopId) {

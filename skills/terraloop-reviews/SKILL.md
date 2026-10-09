@@ -51,13 +51,17 @@ Each MR gets one state:
 
 The gate exits 0 only when there are no `OWED` or `STALE` lines. An approval alone does not pass after a new push, because approvals do not show the head they were given on.
 
-Default filters for the AX team:
+Example filters:
 
 ```bash
---project cloudflare/ai-agents/cloudflare-agent --project cloudflare/ai-agents/clankd \
+--project <group>/<repo-a> --project <group>/<repo-b> \
 --skip-title '(ship|conversation) digest' \
 --human-title '^(Release |\[ucascade\])'
 ```
+
+Put every repo the user reviews in the contract Scope from the start, including repos that only reach the queue because the user is a reviewer. A repo outside Scope costs an override for every clone and fetch.
+
+A `FAIL notes-read` line means the gate could not read an MR's notes after 3 tries. It counts as owed, so the gate fails closed. Rerun the gate. Do not review the MR because of it.
 
 Drafts are skipped. Review a draft only when the user names it.
 
@@ -90,7 +94,7 @@ A 403 from the broker is final. Report it to the owner. Do not try another path,
 
 ## Driver tick
 
-Create one `loops_task` driver. It never stops by itself (see "Never stop: change the speed"). Each tick:
+Create one `loops_task` driver, and create it only after `terraloop_control action=lock`. Then the extension records the driver ID, and `/terraloop-off` stops it. A driver created while terraloop is off is not recorded by the contract. Each tick:
 
 1. Read the last gate result file. If it is older than the last tick, start the gate again with `nohup`.
 2. Collect finished pass-2 children. Rerun their claims and post every MR that is ready. Several posts in one tick is normal.
@@ -100,9 +104,15 @@ Create one `loops_task` driver. It never stops by itself (see "Never stop: chang
 
 A tick returns in about 2 minutes. Run slow work (tests, installs, the gate) with `nohup` and a result file.
 
-## Never stop: change the speed
+## Run until the user stops it; change the speed
 
-The review loop does not end when the queue is empty. Only the user ends it: by saying so, by `/terraloop-off`, or by deleting the driver. "Loop off" from the user stops the timer, not the reviews. If MRs are still owed, ask with `ask_owner` before you drop them.
+The review loop does not end when the queue is empty. It ends only when the user stops it. Any one of these is a stop:
+
+- The user says stop, loop off, or done.
+- The user runs `/terraloop-off`. The extension then stops the recorded driver. If a driver tick still arrives, `terraloop_control action=status` shows `off`.
+- The user deletes the driver.
+
+On a stop, delete your own driver with `loops_task action=delete` in the same turn, if it still exists. Then report what is still owed. Do not keep ticking. Do not tell the user it will keep going. A tick that arrives while `terraloop_control action=status` shows `off` is a stop: delete the driver and do not review.
 
 The driver has two speeds. It changes its own interval with `loops_task action=edit` (the edit keeps the same driver running).
 
@@ -111,8 +121,8 @@ The driver has two speeds. It changes its own interval with `loops_task action=e
 | **Work** | `5m` | The gate shows any `OWED` or `STALE` MR, or a pass-2 child is in flight, or a post is pending. |
 | **Idle** | `10m` | A fresh gate run (started after the last post) exits 0, and nothing is in flight. |
 
-- **Work to idle.** A fresh gate run exits 0 and no child is in flight. Run `terraloop_control action=gate`. Send one `job.complete` push with the round summary: every MR with its head SHA, verdict, note ID, and second-pass model, plus all `HUMAN` MRs and open blockers. Then edit the driver to `10m`. Do not delete it.
-- **Idle tick.** Run the gate only (in the background, result file). Do nothing else. Send no push when nothing changed.
+- **Work to idle.** A fresh gate run exits 0 and no child is in flight. Run `terraloop_control action=gate`. Send one round-summary push: every MR with its head SHA, verdict, note ID, and second-pass model, plus all `HUMAN` MRs and open blockers. Then edit the driver to `10m`. Do not delete it, unless the user stopped the loop.
+- **Idle tick.** Run the gate only (in the background, result file). Do nothing else. Send no push when nothing changed. Keep the reply to one line.
 - **Idle to work.** The gate shows an `OWED` or `STALE` MR. Edit the driver to `5m` in the same tick, and start pass 2 for every owed MR at once (Parallel first). Do not wait for the next tick.
 - "Truly nothing to do" means: the gate exits 0, no child is running, no post is waiting, and no blocker reply is waiting. If any one is false, stay in work mode.
 - Record the mode and the interval in the state file every tick.
@@ -121,8 +131,8 @@ If the user says the queue is not done, believe it. Run the gate again, find the
 
 ## Two passes before any post
 
-1. **Pass 1, parent (`claude-opus-5-5`).** Read every existing thread first. Diff from the MR's `diff_refs.base_sha`. Run the narrowest type check and tests with `nohup`. Probe the changed logic.
-2. **Pass 2, background child, read-only, different model.** Use `gpt-6-astra` for auth, credentials, secrets, sandboxing, or leaks. Use `claude-fable-5-1` for all other work. Always pass `model` and `startupWatchdogMs=900000`. Give the child the head and base SHA, the topic, and the list of existing threads, so it does not repeat them. Do not give it pass 1's verdict. Each finding needs BLOCK, NIT, or QUESTION, file:line at the head, and a command. The child ends with a line that starts with `VERDICT:`.
+1. **Pass 1, parent.** Write it to a file (`p1/<iid>.md`) with the head SHA, the threads you read, the risky lines, and the type-check and test result (or why they were skipped). Never approve without this file. Read every existing thread first. Diff from the MR's `diff_refs.base_sha`. Run the narrowest type check and tests with `nohup`. Probe the changed logic.
+2. **Pass 2, background child, read-only, different model.** Use your strongest security model for auth, credentials, secrets, sandboxing, or leaks. Use a different general model for all other work. If a model returns an error or a spending limit, fall back to another model and say so in the note. Always pass `model` and `startupWatchdogMs=900000`. Give the child the head and base SHA, the topic, and the list of existing threads, so it does not repeat them. Do not give it pass 1's verdict. Each finding needs BLOCK, NIT, or QUESTION, file:line at the head, and a command. The child ends with a line that starts with `VERDICT:`.
 3. **Reconcile.** Rerun every pass-2 claim yourself. Fix wrong line numbers before citing.
    - A proven BLOCK blocks. Redo the work, then run a new pass 2. After 2 rounds, post a `HUMAN:` receipt with both positions. Do not approve.
    - A BLOCK you disprove becomes a question or a nit.
@@ -142,24 +152,25 @@ The pantry recipe `review_loop` (v2 or later) can make the next-step decision. U
 - Put each finding inline on the changed line. If the line is outside the diff, GitLab returns 400 `line_code`. Then put it in the summary note with a permalink.
 - Do not repeat bot or colleague findings. Refer to them.
 - End every summary note with `reviewed-sha: <full head sha>`, or `review-blocked: <reason> <full head sha>`.
-- Do not approve with an open, proven blocker.
+- Do not approve with an open, proven blocker. Do not approve while a person has an unresolved blocking thread on the MR, even if you did not raise it.
+- Never merge. Reviewing is notes, discussions, approve, and unapprove only. Merging belongs to a human, and a review credential should not be able to merge (see the README).
 - After you approve, read the approvals list again. A refused approval is not an approval.
 - If local tests cannot run, say so, and cite the head pipeline status.
-- Write a receipt to `~/cloudflare/.context/reviews/<project>-mr-<iid>-receipt.md` with `VERDICT`, `HEAD`, `NOTE`, `APPROVALS`, `TYPECHECK`, `TESTS`, and `SECOND_PASS`. Add `HUMAN` when it applies.
+- Write a receipt to `<receipts dir>/<project>-mr-<iid>-receipt.md` with `VERDICT`, `HEAD`, `NOTE`, `APPROVALS`, `TYPECHECK`, `TESTS`, and `SECOND_PASS`. Add `HUMAN` when it applies.
 
 ## Push notifications
 
-Send a My AX push with `mcp__my_ax__notify_owner` for every event below. Do not wait for the end of the loop.
+Send the owner a push notification for every event below, with the push tool your setup provides. Do not wait for the end of the loop.
 
 - **Each posted review** (approve, changes requested, should-fix, or marker): `kind: "job.complete"`. Title: `Approved !<iid>` or `Changes requested !<iid>`. Body: 1-3 lines with the main finding and the MR URL. `href` takes only same-origin links, so put the GitLab URL in the body.
 - **Each blocker** (a proven BLOCK, a moved SHA, auth failure, children dying, or a human-only MR): `kind: "job.needs_input"`. Say what is blocked and the next step.
 - If several MRs post in one tick, one push can list them all.
 
-## Blockers: ask through My AX, keep the loop alive
+## Blockers: ask the owner, keep the loop alive
 
 A blocker pauses one MR, not the loop. Blockers are: expired auth, missing credentials, GitLab access failures, unclear authorization, human-only decisions, and a SHA that moves during review. Do not retry a known auth failure.
 
-1. Ask the owner with `mcp__my_ax__ask_owner`. Pass this session's `sessionId` (from `PI_SESSION_ID`), a short question, and 2 to 4 options, for example `["Fixed, continue", "Skip this MR", "Stop the loop"]`. The answer comes back into this session.
+1. Ask the owner with a push that names the MR, the question, and 2 to 4 options, for example "Fixed, continue", "Skip this MR", "Stop the loop". If your push tool can route the answer back into this session, use that. If it refuses the session (for example, "session not found"), send a plain push and tell the user the answer must come in this session.
 2. Mark the MR `BLOCKED <reason>` in the state file, and keep working on every other MR.
 3. When the answer arrives, act on it in the next turn, then switch to work mode if there is work.
 4. Ask once per blocker. Do not ask again while the question is still open.
