@@ -24,7 +24,7 @@ reason.
 ## Quick Start
 
 ```sh
-pi install git:github.com/acoyfellow/terraloop-mode@2026.10.9
+pi install git:github.com/acoyfellow/terraloop-mode@ba8c54e
 ```
 
 Ask for a loop in plain language:
@@ -214,7 +214,7 @@ Every allow, block, override, arm, release, gate, and settle tick is appended to
 ## Install
 
 ```sh
-pi install git:github.com/acoyfellow/terraloop-mode@2026.10.9
+pi install git:github.com/acoyfellow/terraloop-mode@ba8c54e
 ```
 
 The package ships the gate extension and the protocol skill it enforces, so the
@@ -309,7 +309,7 @@ tests/                      phase transitions, classification, settle, negative 
 
 ## Versioning
 
-Releases are date tags such as `2026.10.9`. `pi install` pins a git ref, so the
+Releases are date tags such as `2026.8.14`. `pi install` pins a git ref, so the
 tag shows how stale a pin is. The `package.json` version stays `0.0.1`.
 
 ## License
