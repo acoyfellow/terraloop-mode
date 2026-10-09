@@ -1,0 +1,19 @@
+README.md
+  s_b4f0cc27d836af::t_d143fe2e27f467 27,217,312
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "f93b23dc3b3a02b8552ff32cbf997aa0e0fe1fd9",
+  "prompts": {},
+  "sessions": {
+    "s_b4f0cc27d836af": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a0ce9e-c9f5-760a-9147-eddf8c03bb3a",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Jordan Coeyman <coeyman@gmail.com>"
+    }
+  }
+}
