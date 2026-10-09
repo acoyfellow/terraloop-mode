@@ -24,7 +24,7 @@ reason.
 ## Quick Start
 
 ```sh
-pi install git:github.com/acoyfellow/terraloop-mode@2026.8.14
+pi install git:github.com/acoyfellow/terraloop-mode@2026.10.9
 ```
 
 Ask for a loop in plain language:
@@ -214,7 +214,7 @@ Every allow, block, override, arm, release, gate, and settle tick is appended to
 ## Install
 
 ```sh
-pi install git:github.com/acoyfellow/terraloop-mode@2026.8.14
+pi install git:github.com/acoyfellow/terraloop-mode@2026.10.9
 ```
 
 The package ships the gate extension and the protocol skill it enforces, so the
@@ -244,8 +244,8 @@ reflog. Push, then move the pin.
 bun run check
 ```
 
-`bun run check` runs `tsc --noEmit` and the test suite: 66 tests across six
-files as of `ee9bd6a`. The suite covers phase transitions, tool classification
+`bun run check` runs `tsc --noEmit` and the test suite: 76 tests across eight
+files as of `e700531`. The suite covers phase transitions, tool classification
 for read-only and mutating shell, scope containment, override consumption, disk
 round-trip, settle tick decisions, turn-exhaustion decisions, and malformed
 input. A negative control asserts that a permissive gate fails the scenarios the
@@ -309,7 +309,7 @@ tests/                      phase transitions, classification, settle, negative 
 
 ## Versioning
 
-Releases are date tags such as `2026.8.14`. `pi install` pins a git ref, so the
+Releases are date tags such as `2026.10.9`. `pi install` pins a git ref, so the
 tag shows how stale a pin is. The `package.json` version stays `0.0.1`.
 
 ## License
