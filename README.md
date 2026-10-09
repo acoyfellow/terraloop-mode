@@ -24,7 +24,7 @@ reason.
 ## Quick Start
 
 ```sh
-pi install git:github.com/acoyfellow/terraloop-mode@ba8c54e
+pi install git:github.com/acoyfellow/terraloop-mode@main
 ```
 
 Ask for a loop in plain language:
@@ -214,7 +214,7 @@ Every allow, block, override, arm, release, gate, and settle tick is appended to
 ## Install
 
 ```sh
-pi install git:github.com/acoyfellow/terraloop-mode@ba8c54e
+pi install git:github.com/acoyfellow/terraloop-mode@main
 ```
 
 The package ships the gate extension and the protocol skill it enforces, so the
