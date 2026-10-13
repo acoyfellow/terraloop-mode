@@ -17,9 +17,12 @@ An MR is done when the current user has, bound to the CURRENT head sha:
   a note with 'reviewed-sha: <head>', or
   a note with 'review-blocked:' that also contains '<head>'.
 An approval with no note at the current head is STALE after a new push.
+A review at the current head is ASKED when, after the user's latest review note,
+someone re-requests the user's review, @mentions the user, or replies in a
+thread the user started. Bots are ignored.
 
-Prints one line per MR: OWED, STALE, HUMAN, or ok. Exits 0 only when nothing
-is OWED or STALE.
+Prints one line per MR: OWED, STALE, ASKED, HUMAN, or ok. Exits 0 only when
+nothing is OWED, STALE, or ASKED.
 EOF
   exit 2
 }
@@ -70,6 +73,23 @@ candidates_json() {
     })'
 }
 
+asked_since_review() {
+  local project_id="$1" iid="$2" raw="$3" since threads
+  since=$(printf '%s' "$raw" | jq -rs --arg me "$me" '[add // [] | .[] | select(.author.username == $me and (.system | not) and (.body | contains("reviewed-sha: "))) | .created_at] | max // empty')
+  [ -n "$since" ] || return 1
+  if printf '%s' "$raw" | jq -es --arg me "$me" --arg since "$since" '
+    [add // [] | .[] | select(.created_at > $since and (.author.username | test("bot|^gsa_") | not) and .author.username != $me)
+      | select((.system and (.body | test("requested review from .*@" + $me))) or ((.system | not) and (.body | test("@" + $me + "\\b"))))]
+    | length > 0' >/dev/null; then
+    return 0
+  fi
+  threads=$(glab api --paginate "projects/$project_id/merge_requests/$iid/discussions?per_page=100" 2>/dev/null) || return 1
+  printf '%s' "$threads" | jq -es --arg me "$me" --arg since "$since" '
+    [add // [] | .[] | select(.notes[0].author.username == $me) | .notes[1:][]
+      | select(.created_at > $since and .author.username != $me and (.author.username | test("bot|^gsa_") | not))]
+    | length > 0' >/dev/null
+}
+
 review_state() {
   local project_id="$1" iid="$2" head="$3"
   local notes approved raw attempt
@@ -85,6 +105,9 @@ review_state() {
   fi
   notes=$(printf '%s' "$raw" | jq -s --arg me "$me" '[add // [] | .[] | select(.author.username == $me) | .body]')
   if printf '%s' "$notes" | jq -e --arg sha "$head" 'any(contains("reviewed-sha: " + $sha))' >/dev/null; then
+    if asked_since_review "$project_id" "$iid" "$raw"; then
+      echo "ASKED"; return
+    fi
     echo "ok reviewed"; return
   fi
   if printf '%s' "$notes" | jq -e --arg sha "$head" 'any(contains("review-blocked:") and contains($sha))' >/dev/null; then
