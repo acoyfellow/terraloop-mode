@@ -15,10 +15,23 @@ A review loop keeps the user's review queue empty. Each review is proven, reprod
 
 | Script | Question | Passes when |
 |---|---|---|
-| `gate.sh --queue …` | Is the queue empty? | No `OWED` or `STALE` MR |
+| `gate.sh --queue …` | Is the queue empty? | No `OWED`, `STALE`, `ASKED`, or `UNBLOCKED` MR |
 | `recipe-gate.sh <project> <iid> [--dry-run]` | Was this one review done right? | All recipe gates pass (below) |
 
-Queue states: `ok reviewed`, `ok blocked`, `STALE` (new push since the review), `OWED`, `HUMAN` (matches `--human-title`; report it, never approve it). `FAIL notes-read` counts as owed; rerun the gate.
+Queue states:
+
+| State | Meaning | Action |
+|---|---|---|
+| `OWED` | No review yet | Full recipe |
+| `STALE` | New push since the review | Re-review the interdiff (`git range-diff` for rebases) |
+| `ASKED` | Same head, but since the last review a person re-requested review, @mentioned the user, or replied in the user's thread | Read the ask, answer it, re-review if needed |
+| `UNBLOCKED` | The last note withheld approval for other people's threads, and none are open now | Re-check the head, then approve |
+| `HUMAN` | Matches `--human-title` | Report it, never approve it |
+| `ok reviewed` / `ok blocked` | Done at this head | None |
+
+`FAIL notes-read` counts as owed; rerun the gate. A note that withholds approval says `review-waiting-on: <usernames>` so `UNBLOCKED` can find it.
+
+A head-only gate misses a re-review request made without a push. Example: Kylie asked in a chat channel for re-reviews of cf-build-bench !106, !107, and !113 at unchanged heads. The old gate said `ok reviewed` for all three. `ASKED` and `UNBLOCKED` close the GitLab half of that gap.
 
 ```bash
 bash <skill-dir>/gate.sh --queue \
@@ -31,7 +44,7 @@ Run the queue gate with `nohup` and a result file. It can take minutes.
 
 ## The recipe: one review
 
-Evidence lives in `$REVIEW_RECIPE_DIR/<iid>/` (default `/tmp/rv/recipe/<iid>/`). Each step writes one file. `recipe-gate.sh` checks the files, not your narration.
+Evidence lives in `$REVIEW_RECIPE_DIR/<iid>/` (default `/tmp/rv/recipe/<iid>/`). For a long loop, set `REVIEW_RECIPE_DIR` outside `/tmp`: a reboot clears `/tmp`, and with it the `gate-final.out` proof. Each step writes one file. `recipe-gate.sh` checks the files, not your narration.
 
 | # | Step | File | Gate checks |
 |---|---|---|---|
@@ -77,7 +90,7 @@ Pick the visual by finding type: logic or security bug, repro plus walk-through;
 | Pass 2 | a different strong model; the strongest for auth, secrets, money |
 | Convergence | a third model, different vendor if possible |
 
-Run children as `pi -p --no-session --provider <p> --model <m> < prompt > out` under `nohup`. Never put the prompt on argv. If a model refuses with a cybersecurity flag, reword as a correctness review against a written specification and retry once. If it returns 404 or a spending limit, fall back and say so in the note.
+**Parallel first.** Prefer Terrarium children (`terrarium_spawn` with `background: true`) for pass 2 and convergence: they run in cloud sandboxes, so 6 MRs in flight do not load the laptop. Fall back to local `pi -p --no-session --provider <p> --model <m> < prompt > out` under `nohup` when Terrarium returns `Unauthorized` or cannot reach the GitLab host, and say which runner each pass used in the note. Never put the prompt on argv. If a model refuses with a cybersecurity flag, reword as a correctness review against a written specification and retry once. If it returns 404 or a spending limit, fall back and say so in the note.
 
 ## Rules
 
@@ -100,10 +113,11 @@ Run children as `pi -p --no-session --provider <p> --model <m> < prompt > out` u
 
 1. If `terraloop_control action=status` shows `off`, delete the driver and stop.
 2. If the last queue-gate result is older than the last tick, start it again with `nohup`.
-3. Collect finished children. For each MR at step 10, re-fetch and post. Several posts per tick is normal.
-4. Fill free slots (up to 6 MRs in flight, PARALLEL FIRST): run steps 1-4 for the next `OWED` or `STALE` MRs, then launch their pass-2 children together.
-5. Cancel a child whose output has not grown in 10 minutes and relaunch it once.
-6. Update `$REVIEW_RECIPE_DIR/state.md`: per MR, head, step, child models, note ID.
+3. Backup check: read the team review channel named in the contract for re-review asks since the last tick. Treat each linked MR as `ASKED`, even when the gate says `ok`. If no tool can read that channel, say so in the contract and ask the user to forward asks; do not claim coverage.
+4. Collect finished children. For each MR at step 10, re-fetch and post. Several posts per tick is normal.
+5. Fill free slots (up to 6 MRs in flight, PARALLEL FIRST): run steps 1-4 for the next `OWED`, `STALE`, `ASKED`, or `UNBLOCKED` MRs, then launch their pass-2 children together.
+6. Cancel a child whose output has not grown in 10 minutes and relaunch it once.
+7. Update `$REVIEW_RECIPE_DIR/state.md`: per MR, head, step, child models, note ID.
 
 A tick returns in about 2 minutes. Slow work runs under `nohup`.
 
