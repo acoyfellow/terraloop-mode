@@ -102,7 +102,7 @@ Pick the visual by finding type: logic or security bug, repro plus walk-through;
 - After approving, read the approvals list again.
 - Do not repeat bot or colleague findings. Refer to them.
 - Put inline findings on changed lines. If GitLab returns 400 `line_code`, keep the finding in the note.
-- Write notes in ASD-STE100 Simplified Technical English.
+- Write notes in ASD-STE100 Simplified Technical English and follow the user's writing guide if one exists (for example `coey.dev/WRITING-GUIDE.md`): open on the finding, name the mechanism, bound each claim, no `→` arrows, no slop words, bold for scanning only. `recipe-gate.sh` checks the mechanical part (`style`).
 
 ## Contract
 

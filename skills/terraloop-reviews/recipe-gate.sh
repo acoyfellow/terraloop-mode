@@ -17,6 +17,7 @@ Gates:
   reconcile      reconcile.md names the live head
   convergence    p3.out has a VERDICT: line
   repro          REPRO_CMD (from teach/repro.env) exits non-zero at head
+  style          note.md: no arrows, no banned slop words, <= 3 bold spans outside <details>
   lesson         note.md: visible lines (outside <details>) <= 25, has a
                  mermaid block or image, a "Run it" command, and a
                  reviewed-sha:/review-blocked: line with the live head
@@ -88,6 +89,14 @@ if [ -f "$note" ]; then
   grep -q 'Run it' "$note" || problems="$problems no-run-it"
   grep -qE "^(reviewed-sha|review-blocked):.*$live_head" "$note" || problems="$problems no-sha-footer"
   if [ -z "$problems" ]; then pass lesson "visible=$visible"; else fail lesson "$problems"; fi
+  style=""
+  arrows=$(grep -o '→' "$note" | wc -l | tr -d ' ')
+  [ "$arrows" -eq 0 ] || style="$style arrows=$arrows"
+  banned=$(grep -ioE "it's worth noting|it's important to note|the key insight|here's the thing|it turns out|let me be clear|at its core|when it comes to|in conclusion|ultimately|overall,|game-changer|paradigm shift|seamless|robust|crucial|pivotal|transformative|a testament to|i hope this helps" "$note" | sort -u | tr '\n' ',' | sed 's/,$//')
+  [ -z "$banned" ] || style="$style banned=[$banned]"
+  bold=$(awk '/<details>/{hidden=1} !hidden' "$note" | grep -o '\*\*[^*]*\*\*' | wc -l | tr -d ' ')
+  [ "$bold" -le 3 ] || style="$style bold=$bold>3"
+  if [ -z "$style" ]; then pass style "WRITING-GUIDE ok"; else fail style "$style"; fi
 else
   fail lesson "note.md missing"
 fi
