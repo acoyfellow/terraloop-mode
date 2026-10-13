@@ -1,0 +1,19 @@
+skills/terraloop-reviews/gate.sh
+  s_aff9605c3b4204::t_91c0b93569dd68 20-22,24-25,76-92,108-110
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "13da63bfce7de41cdd68aab2142d6ec5a02ec381",
+  "prompts": {},
+  "sessions": {
+    "s_aff9605c3b4204": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a0806f-f6e6-7378-a167-08e626c7de42",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Jordan Coeyman <jcoeyman@cloudflare.com>"
+    }
+  }
+}
