@@ -103,7 +103,14 @@ unblocked_since_review() {
     | test("review-waiting-on:|not approving|No approval from me"; "i")' >/dev/null || return 1
   approved=$(glab api "projects/$project_id/merge_requests/$iid/approvals" 2>/dev/null | jq -r --arg me "$me" '[.approved_by[]?.user.username] | index($me) != null')
   [ "$approved" = "true" ] && return 1
-  [ "$(glab api "projects/$project_id/merge_requests/$iid" 2>/dev/null | jq -r '.head_pipeline.status // "none"')" = failed ] && return 1
+  local pipe="" try
+  for try in 1 2 3; do
+    pipe=$(glab api "projects/$project_id/merge_requests/$iid" 2>/dev/null | jq -r '.head_pipeline.status // empty')
+    [ -n "$pipe" ] && break
+    sleep 2
+  done
+  [ -z "$pipe" ] && return 1
+  [ "$pipe" = failed ] && return 1
   open=$(glab api --paginate "projects/$project_id/merge_requests/$iid/discussions?per_page=100" 2>/dev/null | jq -s --arg me "$me" '
     [add // [] | .[] | select(.notes[0].resolvable and (.notes[0].resolved | not))
       | .notes[0].author.username | select(. != $me and (test("bot|^gsa_") | not))] | length') || return 1
