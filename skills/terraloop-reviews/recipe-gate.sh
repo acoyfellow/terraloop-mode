@@ -19,7 +19,7 @@ Gates:
   lesson         note.md: visible lines (outside <details>) <= 25, has a
                  mermaid block or image, a "Run it" command, and a
                  reviewed-sha:/review-blocked: line with the live head
-  posted         (skipped with --dry-run) a jcoeyman note on the MR carries
+  posted         (skipped with --dry-run) a note by the current user carries
                  reviewed-sha:<live head>; receipt.md exists
 EOF
   exit 2
