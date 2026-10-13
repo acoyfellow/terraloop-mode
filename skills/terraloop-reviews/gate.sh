@@ -21,8 +21,13 @@ A review at the current head is ASKED when, after the user's latest review note,
 someone re-requests the user's review, @mentions the user, or replies in a
 thread the user started. Bots are ignored.
 
-Prints one line per MR: OWED, STALE, ASKED, HUMAN, or ok. Exits 0 only when
-nothing is OWED, STALE, or ASKED.
+A review at the current head is UNBLOCKED when the user's latest review note
+withheld approval because of other people's threads ('review-waiting-on:' or
+'not approving'), the user has not approved, and no person other than the user
+now has an unresolved thread.
+
+Prints one line per MR: OWED, STALE, ASKED, UNBLOCKED, HUMAN, or ok. Exits 0
+only when nothing is OWED, STALE, ASKED, or UNBLOCKED.
 EOF
   exit 2
 }
@@ -90,6 +95,20 @@ asked_since_review() {
     | length > 0' >/dev/null
 }
 
+unblocked_since_review() {
+  local project_id="$1" iid="$2" raw="$3" head="$4" approved open
+  printf '%s' "$raw" | jq -es --arg me "$me" --arg sha "$head" '
+    [add // [] | .[] | select(.author.username == $me and (.system | not) and (.body | contains("reviewed-sha: " + $sha)))]
+    | sort_by(.created_at) | last | .body // ""
+    | test("review-waiting-on:|not approving|No approval from me"; "i")' >/dev/null || return 1
+  approved=$(glab api "projects/$project_id/merge_requests/$iid/approvals" 2>/dev/null | jq -r --arg me "$me" '[.approved_by[]?.user.username] | index($me) != null')
+  [ "$approved" = "true" ] && return 1
+  open=$(glab api --paginate "projects/$project_id/merge_requests/$iid/discussions?per_page=100" 2>/dev/null | jq -s --arg me "$me" '
+    [add // [] | .[] | select(.notes[0].resolvable and (.notes[0].resolved | not))
+      | .notes[0].author.username | select(. != $me and (test("bot|^gsa_") | not))] | length') || return 1
+  [ "$open" = "0" ]
+}
+
 review_state() {
   local project_id="$1" iid="$2" head="$3"
   local notes approved raw attempt
@@ -107,6 +126,9 @@ review_state() {
   if printf '%s' "$notes" | jq -e --arg sha "$head" 'any(contains("reviewed-sha: " + $sha))' >/dev/null; then
     if asked_since_review "$project_id" "$iid" "$raw"; then
       echo "ASKED"; return
+    fi
+    if unblocked_since_review "$project_id" "$iid" "$raw" "$head"; then
+      echo "UNBLOCKED"; return
     fi
     echo "ok reviewed"; return
   fi
