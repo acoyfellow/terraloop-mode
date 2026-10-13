@@ -1,182 +1,133 @@
 ---
 name: terraloop-reviews
-description: Start a reusable Terraloop for GitLab merge-request reviews. Use when the user invokes Review Terraloop, asks to review an MR queue continuously, or wants bounded review work with exact-SHA evidence, verified GitLab actions, and explicit human-blocker handling.
+description: Start a reusable Terraloop for GitLab merge-request reviews. Use when the user invokes Review Terraloop, asks to review an MR queue continuously, or wants bounded review work with exact-SHA evidence, runnable repros, short educational notes, verified GitLab actions, and explicit human-blocker handling.
 ---
 
 # Review Terraloop
 
-A review loop keeps the user's review queue empty. The queue is live. It is never a list that was written down at the start.
-
-## Invocation
+A review loop keeps the user's review queue empty. Each review is proven, reproducible, and teaches the reader why. The queue is live: the gate discovers it on every run.
 
 ```text
 /skill:terraloop-reviews <projects, filters, or extra MRs>
 ```
 
-`/terraloop:reviews` is not a Pi skill command. Use the form above.
+## Two gates
 
-## The rule that matters most
+| Script | Question | Passes when |
+|---|---|---|
+| `gate.sh --queue …` | Is the queue empty? | No `OWED` or `STALE` MR |
+| `recipe-gate.sh <project> <iid> [--dry-run]` | Was this one review done right? | All recipe gates pass (below) |
 
-**The gate discovers the queue each time it runs.** New MRs, new pushes to reviewed MRs, and MRs added by the user all count. The loop is done only when the live queue is empty. A fixed list of MRs is only a starting point.
-
-Failure this rule prevents: a loop locked on 12 MRs reported "done" while new MRs (for example !776) sat unreviewed.
-
-## Gate
+Queue states: `ok reviewed`, `ok blocked`, `STALE` (new push since the review), `OWED`, `HUMAN` (matches `--human-title`; report it, never approve it). `FAIL notes-read` counts as owed; rerun the gate.
 
 ```bash
 bash <skill-dir>/gate.sh --queue \
   --project <group/project> [--project ...] \
-  --skip-title '<regex>' --skip-author '<regex>' \
-  --human-title '<regex>' \
-  [<group/project!iid> ...]
+  --skip-title '(ship|conversation) digest' \
+  --human-title '^(Release |\[ucascade\])'
 ```
 
-The gate finds:
+Run the queue gate with `nohup` and a result file. It can take minutes.
 
-- open, non-draft MRs where the user is a reviewer or assignee, and
-- every open, non-draft MR in each `--project`, and
-- each extra `group/project!iid` the user names.
+## The recipe: one review
 
-It leaves out the user's own MRs and MRs that match the skip filters.
+Evidence lives in `$REVIEW_RECIPE_DIR/<iid>/` (default `/tmp/rv/recipe/<iid>/`). Each step writes one file. `recipe-gate.sh` checks the files, not your narration.
 
-Each MR gets one state:
+| # | Step | File | Gate checks |
+|---|---|---|---|
+| 1 | **Freshness.** Save the MR JSON. | `mr.json` | head equals live head, MR open |
+| 2 | **Pass 1 (parent).** Read every thread, the ticket, and the diff from `diff_refs.base_sha`. Run the narrowest type check and tests at head. Name the risky lines. | `p1.md` with `reviewed-sha:` and `tests:` | names the head, has tests |
+| 3 | **Runtime proof.** Probe each behavior claim by running code. | `probe/` | (input to repro) |
+| 4 | **Blast radius.** List callers of the changed code. Prove the one fact that makes it safe. | `blast.md` | names the head |
+| 5 | **Pass 2 (adversary).** Different model, read-only. Give it head, base, topic, and the threads to skip. Not your verdict. | `p2.out` | has `VERDICT:` |
+| 6 | **Reconcile.** Rerun every pass-2 claim. A problem that also exists at the old head is a should-fix, not a blocker. | `reconcile.md` | names the head |
+| 7 | **Convergence.** One fresh model that has not seen pass 2's verdict, told what is already covered. | `p3.out` | has `VERDICT:` |
+| 8 | **Repro.** Each finding gets an isolated test that fails at head and passes with a fix you tested. | `teach/repro.test.ts`, `teach/repro.env` | `REPRO_CMD` fails at head |
+| 9 | **Lesson.** Write the note (format below). | `note.md` | ≤ 25 visible lines, a visual, a `Run it` command, SHA footer |
+| 10 | **Post and verify.** Re-fetch head, post, read back, write receipt, push. | `note-id.txt`, `receipt.md` | note with `reviewed-sha:<head>` exists, receipt exists |
 
-| State | Meaning |
+Run `recipe-gate.sh … --dry-run` before posting. Run it without `--dry-run` after.
+
+`repro.env` sets `REPRO_CWD` (a worktree at the head) and `REPRO_CMD`. Keep the worktree until the final gate run passes, then remove it.
+
+## Lesson format (the education layer)
+
+Short beats complete. Depth goes in `<details>`. Visible part:
+
+1. **Verdict** in 1-2 sentences.
+2. Each finding: a heading, **what is wrong** in ≤ 3 sentences, **one visual** (Mermaid that GitLab renders, or an uploaded screenshot or video), and **Run it**: the one command.
+
+Folded in `<details>`:
+
+- **Why**: ≤ 3 steps, each with a permalink `https://<gitlab>/<project>/-/blob/<full sha>/<path>#L<n>`.
+- **Repro** code and the **fix you tested**.
+- **Alternatives**: a table of option, trade-off, pick.
+- **What else I checked**: tests, blast radius, pass 2 and convergence models and results, threads not repeated.
+
+An approval with no findings still gets a 2-3 line "how I convinced myself" summary.
+
+Pick the visual by finding type: logic or security bug, repro plus walk-through; data or state flow, Mermaid diagram; UI, screenshot or `unsurf` video; performance, a timing at realistic size; design gap, a scenario walk-through.
+
+## Models and cost
+
+| Job | Model |
 |---|---|
-| `ok reviewed` | The user has a note with `reviewed-sha: <current head>`. |
-| `ok blocked` | The user has a `review-blocked:` note that names the current head. |
-| `STALE` | The user reviewed or approved an older head. A new push happened. Review again. |
-| `OWED` | No review from the user. |
-| `HUMAN` | Matches `--human-title` (releases, auto-merge MRs). Report it. Do not approve it. |
+| Queue reads, thread summaries, triage | cheapest available |
+| Pass 1, reconcile, final verdict | the driver |
+| Pass 2 | a different strong model; the strongest for auth, secrets, money |
+| Convergence | a third model, different vendor if possible |
 
-The gate exits 0 only when there are no `OWED` or `STALE` lines. An approval alone does not pass after a new push, because approvals do not show the head they were given on.
+Run children as `pi -p --no-session --provider <p> --model <m> < prompt > out` under `nohup`. Never put the prompt on argv. If a model refuses with a cybersecurity flag, reword as a correctness review against a written specification and retry once. If it returns 404 or a spending limit, fall back and say so in the note.
 
-Example filters:
+## Rules
 
-```bash
---project <group>/<repo-a> --project <group>/<repo-b> \
---skip-title '(ship|conversation) digest' \
---human-title '^(Release |\[ucascade\])'
-```
-
-Put every repo the user reviews in the contract Scope from the start, including repos that only reach the queue because the user is a reviewer. A repo outside Scope costs an override for every clone and fetch.
-
-A `FAIL notes-read` line means the gate could not read an MR's notes after 3 tries. It counts as owed, so the gate fails closed. Rerun the gate. Do not review the MR because of it.
-
-Drafts are skipped. Review a draft only when the user names it.
-
-The gate can take minutes on a large queue. Run it with `nohup` and a result file. Do not run it in the foreground of a tick.
+- Never merge, push, rebase, or edit a colleague's branch. Reviews are notes, discussions, approve, and unapprove only.
+- Never approve with a proven blocker, or while a person has an unresolved blocking thread, or on a `HUMAN` MR.
+- Re-fetch head and state immediately before posting. If the head moved, the review is `STALE`; redo it.
+- After approving, read the approvals list again.
+- Do not repeat bot or colleague findings. Refer to them.
+- Put inline findings on changed lines. If GitLab returns 400 `line_code`, keep the finding in the note.
+- Write notes in ASD-STE100 Simplified Technical English.
 
 ## Contract
 
-1. Arm with `terraloop_control action=arm`. North star: "Keep the user's GitLab review queue empty, with two-pass, SHA-bound verdicts."
-2. Show a short contract: projects, filters, extra MRs, allowed actions (comment, approve, request changes), and the gate command above. Wait for the user to confirm.
-3. Lock it with `terraloop_control action=lock`. The proof is the gate command.
-
-Never merge, push, change a colleague's branch, or approve a release unless the contract says so.
-
-## Tier 1: run through the review broker
-
-Reviews run as tier 1. The reviewer runs as the macOS user `reviewer`, with `REVIEW_TIER=1`, `GLAB_CONFIG_DIR=$HOME/.config/review-broker-glab`, and `GITLAB_HOST=127.0.0.1:8443`. glab talks only to the local broker (`~/cloudflare/review-broker`). The broker allows reads, notes, discussions, resolve, approve, and unapprove. It rejects merge, auto-merge, rebase, repository writes, and GraphQL mutations with 403, and it alerts the owner.
-
-A 403 from the broker is final. Report it to the owner. Do not try another path, such as curl, a browser, a script, or a different token. If the session has a real GitLab token, stop and tell the owner. That is a setup fault.
-
-## Parallel first
-
-**This is the default mindset. Write "PARALLEL FIRST" in every contract and driver prompt.** MRs are independent. Work them in parallel. Do not walk the queue one MR at a time. On the first tick, start pass 2 for every independent owed MR at once.
-
-- Keep up to **6 MRs in flight** at once. Every in-flight MR has its own background pass-2 child.
-- Launch new pass-2 children together with `terrarium_spawn_batch` (`background=true`, strategy `allSettled`). Use one job per MR, and give each job its own `model`.
-- Run tests for several MRs at the same time, each under `nohup` with its own result file.
-- The parent does pass 1 for the next MRs while their children run. Each first pass stays short: diff, threads, the risky lines.
-- A stacked chain (for example slices 1/9 to 9/9) still runs in parallel. Diff each slice from its own `diff_refs.base_sha`.
-- Batch independent GitLab reads (MR, notes, approvals) in one `codemode` call with `Promise.allSettled`.
+1. `terraloop_control action=arm`. North star: "Keep the user's review queue empty with recipe-gated, educational reviews."
+2. Show the contract: projects, filters, allowed actions, duration, both gate commands. Put every reviewed repo, the recipe dir, and the receipts dir in Scope from the start. Wait for go.
+3. `terraloop_control action=lock`. The proof is the queue gate.
+4. Create one `loops_task` driver after lock, so `/terraloop-off` stops it.
 
 ## Driver tick
 
-Create one `loops_task` driver, and create it only after `terraloop_control action=lock`. Then the extension records the driver ID, and `/terraloop-off` stops it. A driver created while terraloop is off is not recorded by the contract. Each tick:
+1. If `terraloop_control action=status` shows `off`, delete the driver and stop.
+2. If the last queue-gate result is older than the last tick, start it again with `nohup`.
+3. Collect finished children. For each MR at step 10, re-fetch and post. Several posts per tick is normal.
+4. Fill free slots (up to 6 MRs in flight, PARALLEL FIRST): run steps 1-4 for the next `OWED` or `STALE` MRs, then launch their pass-2 children together.
+5. Cancel a child whose output has not grown in 10 minutes and relaunch it once.
+6. Update `$REVIEW_RECIPE_DIR/state.md`: per MR, head, step, child models, note ID.
 
-1. Read the last gate result file. If it is older than the last tick, start the gate again with `nohup`.
-2. Collect finished pass-2 children. Rerun their claims and post every MR that is ready. Several posts in one tick is normal.
-3. Fill the free in-flight slots: do a quick pass 1 on the next `OWED` or `STALE` MRs, then launch their pass-2 children in one batch.
-4. Cancel any child whose log has not grown for 10 minutes, file `terrarium_report_failure`, and relaunch it.
-5. Update the state file with, for each MR: head SHA, stage, run IDs, and note IDs.
+A tick returns in about 2 minutes. Slow work runs under `nohup`.
 
-A tick returns in about 2 minutes. Run slow work (tests, installs, the gate) with `nohup` and a result file.
-
-## Run until the user stops it; change the speed
-
-The review loop does not end when the queue is empty. It ends only when the user stops it. Any one of these is a stop:
-
-- The user says stop, loop off, or done.
-- The user runs `/terraloop-off`. The extension then stops the recorded driver. If a driver tick still arrives, `terraloop_control action=status` shows `off`.
-- The user deletes the driver.
-
-On a stop, delete your own driver with `loops_task action=delete` in the same turn, if it still exists. Then report what is still owed. Do not keep ticking. Do not tell the user it will keep going. A tick that arrives while `terraloop_control action=status` shows `off` is a stop: delete the driver and do not review.
-
-The driver has two speeds. It changes its own interval with `loops_task action=edit` (the edit keeps the same driver running).
+## Speed and stopping
 
 | Mode | Interval | When |
 |---|---|---|
-| **Work** | `5m` | The gate shows any `OWED` or `STALE` MR, or a pass-2 child is in flight, or a post is pending. |
-| **Idle** | `10m` | A fresh gate run (started after the last post) exits 0, and nothing is in flight. |
+| Work | `5m` | Any `OWED` or `STALE`, a child in flight, or a post pending |
+| Idle | `10m` | A fresh queue gate exits 0 and nothing is in flight |
 
-- **Work to idle.** A fresh gate run exits 0 and no child is in flight. Run `terraloop_control action=gate`. Send one round-summary push: every MR with its head SHA, verdict, note ID, and second-pass model, plus all `HUMAN` MRs and open blockers. Then edit the driver to `10m`. Do not delete it, unless the user stopped the loop.
-- **Idle tick.** Run the gate only (in the background, result file). Do nothing else. Send no push when nothing changed. Keep the reply to one line.
-- **Idle to work.** The gate shows an `OWED` or `STALE` MR. Edit the driver to `5m` in the same tick, and start pass 2 for every owed MR at once (Parallel first). Do not wait for the next tick.
-- "Truly nothing to do" means: the gate exits 0, no child is running, no post is waiting, and no blocker reply is waiting. If any one is false, stay in work mode.
-- Record the mode and the interval in the state file every tick.
+Switch with `loops_task action=edit`. On work to idle, run `terraloop_control action=gate` and send one round summary.
 
-If the user says the queue is not done, believe it. Run the gate again, find the gap, fix the gate filters, and continue.
+The loop ends only when the user stops it, `/terraloop-off` runs, or the contract's duration expires. On a stop, delete the driver in the same turn and report what is still owed.
 
-## Two passes before any post
+## Notifications and blockers
 
-1. **Pass 1, parent.** Write it to a file (`p1/<iid>.md`) with the head SHA, the threads you read, the risky lines, and the type-check and test result (or why they were skipped). Never approve without this file. Read every existing thread first. Diff from the MR's `diff_refs.base_sha`. Run the narrowest type check and tests with `nohup`. Probe the changed logic.
-2. **Pass 2, background child, read-only, different model.** Use your strongest security model for auth, credentials, secrets, sandboxing, or leaks. Use a different general model for all other work. If a model returns an error or a spending limit, fall back to another model and say so in the note. Always pass `model` and `startupWatchdogMs=900000`. Give the child the head and base SHA, the topic, and the list of existing threads, so it does not repeat them. Do not give it pass 1's verdict. Each finding needs BLOCK, NIT, or QUESTION, file:line at the head, and a command. The child ends with a line that starts with `VERDICT:`.
-3. **Reconcile.** Rerun every pass-2 claim yourself. Fix wrong line numbers before citing.
-   - A proven BLOCK blocks. Redo the work, then run a new pass 2. After 2 rounds, post a `HUMAN:` receipt with both positions. Do not approve.
-   - A BLOCK you disprove becomes a question or a nit.
-   - A problem that also exists at the old head is a nit, not a blocker.
-   - For design docs, gaps are comments, not blocks.
-4. Never post before pass 2 finishes.
+- Each posted review: push `job.complete`, title `Reviewed !<iid>`, 1-3 lines, MR URL in the body.
+- Each blocker (moved head, auth failure, human-only decision, dying children): push `job.needs_input` once, with 2-4 options. Mark the MR `BLOCKED` in `state.md` and keep working on the others.
+- If the push tool is missing, search the tool list before declaring it unavailable.
 
-When you read child logs, match `^VERDICT` only, because the task text is echoed into the log. If a child dies at startup, relaunch it once. If it dies again, run `pi -p --no-session --provider <provider> --model <model> "$(cat prompt)" > out` under `nohup`.
+## Receipt
 
-The pantry recipe `review_loop` (v2 or later) can make the next-step decision. Use it when pantry is reachable.
+`receipt.md` fields: `VERDICT`, `HEAD`, `NOTE`, `APPROVALS`, `TYPECHECK`, `TESTS`, `SECOND_PASS`, and `HUMAN` when it applies. Copy it to the receipts dir named in the contract.
 
-## Posting
+## Planned, not installed
 
-- Re-fetch the MR immediately before you post. The state must be `opened` and the SHA must be unchanged.
-- Every finding links to `https://<gitlab>/<project>/-/blob/<full head sha>/<path>#L<n>`.
-- Every claim includes a command that someone can rerun.
-- Put each finding inline on the changed line. If the line is outside the diff, GitLab returns 400 `line_code`. Then put it in the summary note with a permalink.
-- Do not repeat bot or colleague findings. Refer to them.
-- End every summary note with `reviewed-sha: <full head sha>`, or `review-blocked: <reason> <full head sha>`.
-- Do not approve with an open, proven blocker. Do not approve while a person has an unresolved blocking thread on the MR, even if you did not raise it.
-- Never merge. Reviewing is notes, discussions, approve, and unapprove only. Merging belongs to a human, and a review credential should not be able to merge (see the README).
-- After you approve, read the approvals list again. A refused approval is not an approval.
-- If local tests cannot run, say so, and cite the head pipeline status.
-- Write a receipt to `<receipts dir>/<project>-mr-<iid>-receipt.md` with `VERDICT`, `HEAD`, `NOTE`, `APPROVALS`, `TYPECHECK`, `TESTS`, and `SECOND_PASS`. Add `HUMAN` when it applies.
-
-## Push notifications
-
-Send the owner a push notification for every event below, with the push tool your setup provides. Do not wait for the end of the loop.
-
-- **Each posted review** (approve, changes requested, should-fix, or marker): `kind: "job.complete"`. Title: `Approved !<iid>` or `Changes requested !<iid>`. Body: 1-3 lines with the main finding and the MR URL. `href` takes only same-origin links, so put the GitLab URL in the body.
-- **Each blocker** (a proven BLOCK, a moved SHA, auth failure, children dying, or a human-only MR): `kind: "job.needs_input"`. Say what is blocked and the next step.
-- If several MRs post in one tick, one push can list them all.
-
-## Blockers: ask the owner, keep the loop alive
-
-A blocker pauses one MR, not the loop. Blockers are: expired auth, missing credentials, GitLab access failures, unclear authorization, human-only decisions, and a SHA that moves during review. Do not retry a known auth failure.
-
-1. Ask the owner with a push that names the MR, the question, and 2 to 4 options, for example "Fixed, continue", "Skip this MR", "Stop the loop". If your push tool can route the answer back into this session, use that. If it refuses the session (for example, "session not found"), send a plain push and tell the user the answer must come in this session.
-2. Mark the MR `BLOCKED <reason>` in the state file, and keep working on every other MR.
-3. When the answer arrives, act on it in the next turn, then switch to work mode if there is work.
-4. Ask once per blocker. Do not ask again while the question is still open.
-
-If the blocker stops every MR (for example, expired auth), stay alive in idle mode (`10m`) and wait for the answer. Do not delete the driver.
-
-## Writing
-
-Use ASD-STE100 Simplified Technical English in notes and reports. Use short sentences and plain words. When the user asks for status, give counts and links first.
+`~/cloudflare/review-broker` is a credential broker that would make merging impossible for the reviewer. It is not installed. Do not assume it. Reviews run on the user's token under the rules above.
