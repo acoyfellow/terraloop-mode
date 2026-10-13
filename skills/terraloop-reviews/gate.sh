@@ -22,9 +22,9 @@ someone re-requests the user's review, @mentions the user, or replies in a
 thread the user started. Bots are ignored.
 
 A review at the current head is UNBLOCKED when the user's latest review note
-withheld approval because of other people's threads ('review-waiting-on:' or
-'not approving'), the user has not approved, and no person other than the user
-now has an unresolved thread.
+withheld approval because of other people's threads or CI ('review-waiting-on:'
+or 'not approving'), the user has not approved, the head pipeline is not failed,
+and no person other than the user now has an unresolved thread.
 
 Prints one line per MR: OWED, STALE, ASKED, UNBLOCKED, HUMAN, or ok. Exits 0
 only when nothing is OWED, STALE, ASKED, or UNBLOCKED.
@@ -103,6 +103,7 @@ unblocked_since_review() {
     | test("review-waiting-on:|not approving|No approval from me"; "i")' >/dev/null || return 1
   approved=$(glab api "projects/$project_id/merge_requests/$iid/approvals" 2>/dev/null | jq -r --arg me "$me" '[.approved_by[]?.user.username] | index($me) != null')
   [ "$approved" = "true" ] && return 1
+  [ "$(glab api "projects/$project_id/merge_requests/$iid" 2>/dev/null | jq -r '.head_pipeline.status // "none"')" = failed ] && return 1
   open=$(glab api --paginate "projects/$project_id/merge_requests/$iid/discussions?per_page=100" 2>/dev/null | jq -s --arg me "$me" '
     [add // [] | .[] | select(.notes[0].resolvable and (.notes[0].resolved | not))
       | .notes[0].author.username | select(. != $me and (test("bot|^gsa_") | not))] | length') || return 1
