@@ -10,6 +10,7 @@ ${REVIEW_RECIPE_DIR:-/tmp/rv/recipe}/<iid>/. Exit 0 only when every gate passes.
 
 Gates:
   freshness      mr.json head == live head, MR still open
+  ci             if receipt.md says approve, the head pipeline is not failed
   pass1          p1.md names the live head and records tests
   blast          blast.md names the live head
   pass2          p2.out ends a line with VERDICT:
@@ -49,6 +50,13 @@ else
 fi
 
 names_head() { grep -q "$live_head" "$dir/$1" 2>/dev/null; }
+
+pipeline_status=$(printf '%s' "$live" | jq -r '.head_pipeline.status // "none"')
+if [ -f "$dir/receipt.md" ] && grep -qi '^VERDICT: approve' "$dir/receipt.md" && [ "$pipeline_status" = failed ]; then
+  fail ci "approved while head pipeline is failed"
+else
+  pass ci "pipeline=$pipeline_status"
+fi
 
 if names_head p1.md && grep -qi '^tests:' "$dir/p1.md"; then pass pass1 p1.md; else fail pass1 "p1.md missing head or tests line"; fi
 if names_head blast.md; then pass blast blast.md; else fail blast "blast.md missing head"; fi

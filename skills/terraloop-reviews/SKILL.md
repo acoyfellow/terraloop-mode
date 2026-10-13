@@ -96,6 +96,8 @@ Pick the visual by finding type: logic or security bug, repro plus walk-through;
 
 - Never merge, push, rebase, or edit a colleague's branch. Reviews are notes, discussions, approve, and unapprove only.
 - Never approve with a proven blocker, or while a person has an unresolved blocking thread, or on a `HUMAN` MR.
+- Never approve, or say "approval stands", while the head pipeline is `failed`. Read the failing job log first. If the failure comes from this MR, it is a blocker. If it comes from a stack parent, withdraw and point at the parent. `recipe-gate.sh` checks this (`ci`).
+- A re-review runs the tests the change can break, not only the tests the new commit touched. A changed shared type or table list breaks distant fixtures.
 - Re-fetch head and state immediately before posting. If the head moved, the review is `STALE`; redo it.
 - After approving, read the approvals list again.
 - Do not repeat bot or colleague findings. Refer to them.
