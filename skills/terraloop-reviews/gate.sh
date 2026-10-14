@@ -100,7 +100,9 @@ unblocked_since_review() {
   printf '%s' "$raw" | jq -es --arg me "$me" --arg sha "$head" '
     [add // [] | .[] | select(.author.username == $me and (.system | not) and (.body | contains("reviewed-sha: " + $sha)))]
     | sort_by(.created_at) | last | .body // ""
-    | test("review-waiting-on:|not approving|No approval from me"; "i")' >/dev/null || return 1
+    | test("review-waiting-on:|not approving|No approval from me"; "i")
+      and (test("changes requested"; "i") | not)
+      and (test("review-waiting-on:[^\n]*![0-9]+") | not)' >/dev/null || return 1
   approved=$(glab api "projects/$project_id/merge_requests/$iid/approvals" 2>/dev/null | jq -r --arg me "$me" '[.approved_by[]?.user.username] | index($me) != null')
   [ "$approved" = "true" ] && return 1
   local pipe="" try
