@@ -112,7 +112,7 @@ unblocked_since_review() {
     sleep 2
   done
   [ -z "$pipe" ] && return 1
-  [ "$pipe" = failed ] && return 1
+  [ "$pipe" = success ] || return 1
   open=$(glab api --paginate "projects/$project_id/merge_requests/$iid/discussions?per_page=100" 2>/dev/null | jq -s --arg me "$me" '
     [add // [] | .[] | select(.notes[0].resolvable and (.notes[0].resolved | not))
       | .notes[0].author.username | select(. != $me and (test("bot|^gsa_") | not))] | length') || return 1
