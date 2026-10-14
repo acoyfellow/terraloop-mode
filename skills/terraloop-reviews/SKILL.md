@@ -81,6 +81,8 @@ An approval with no findings still gets a 2-3 line "how I convinced myself" summ
 
 Pick the visual by finding type: logic or security bug, repro plus walk-through; data or state flow, Mermaid diagram; UI, screenshot or `unsurf` video; performance, a timing at realistic size; design gap, a scenario walk-through.
 
+Humor is optional. Use it only when it does one of three jobs: it makes the point stick, it softens a hard verdict for the author, or it shows the mechanism from a new angle. One line at most, aimed at the code and never at the person, and the fact stays exact. If it does none of these jobs, leave it out.
+
 ## Models and cost
 
 | Job | Model |
