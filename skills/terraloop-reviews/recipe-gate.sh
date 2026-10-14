@@ -96,6 +96,14 @@ if [ -f "$note" ]; then
   [ -z "$banned" ] || style="$style banned=[$banned]"
   bold=$(awk '/<details>/{hidden=1} !hidden' "$note" | grep -o '\*\*[^*]*\*\*' | wc -l | tr -d ' ')
   [ "$bold" -le 3 ] || style="$style bold=$bold>3"
+  alerts=$(grep -cE '^> \[!(note|tip|important|warning|caution)\]' "$note")
+  [ "$alerts" -le 1 ] || style="$style alerts=$alerts>1"
+  bad_alert=$(grep -oE '^> \[![A-Za-z]+\]' "$note" | grep -viE '\[!(note|tip|important|warning|caution)\]' | head -1)
+  [ -z "$bad_alert" ] || style="$style unknown-alert=$bad_alert"
+  if [ -f "$dir/suggestions.jsonl" ]; then
+    bad_rows=$(jq -c 'select((.path|type)!="string" or (.line|type)!="number" or (.body|type)!="string" or (.replacement|type)!="string")' "$dir/suggestions.jsonl" 2>&1 | wc -l | tr -d ' ')
+    [ "$bad_rows" -eq 0 ] || style="$style suggestions-malformed=$bad_rows"
+  fi
   if [ -z "$style" ]; then pass style "WRITING-GUIDE ok"; else fail style "$style"; fi
 else
   fail lesson "note.md missing"

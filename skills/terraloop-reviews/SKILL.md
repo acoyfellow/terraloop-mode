@@ -81,6 +81,20 @@ An approval with no findings still gets a 2-3 line "how I convinced myself" summ
 
 Pick the visual by finding type: logic or security bug, repro plus walk-through; data or state flow, Mermaid diagram; UI, screenshot or `unsurf` video; performance, a timing at realistic size; design gap, a scenario walk-through.
 
+### GitLab Markdown tools
+
+Use GitLab's own syntax (https://docs.gitlab.com/user/markdown/) when it saves the author a step:
+
+| Tool | Syntax | Use when |
+|---|---|---|
+| Suggestion | `post-suggestions.sh <project> <iid> <dir>` with `suggestions.jsonl` | The fix is a line or two the author can apply in one click. Posts a diff discussion with a `suggestion:-N+0` block. Run `--dry-run` first. |
+| Alert | `> [!warning]` first line of note.md | The verdict needs a banner: approval withheld, held for CI, approval withdrawn. At most one per note; the recipe gate fails on more or on an unknown type. |
+| Inline diff | `{+ new +}` / `[- old -]` | Show a wording or value change in the note body without a code block. |
+| Task list | `- [ ] fix X` | Two or more fix items the author can tick off; re-reviews check which are ticked. |
+| Footnote | `text[^1]` then `[^1]: permalink` | Move long permalinks out of a sentence. |
+
+Suggestions go on the diff; the summary note still goes through `post-safe.sh` and names the suggestions it posted.
+
 Humor is optional. Use it only when it does one of three jobs: it makes the point stick, it softens a hard verdict for the author, or it shows the mechanism from a new angle. One line at most, aimed at the code and never at the person, and the fact stays exact. If it does none of these jobs, leave it out.
 
 ## Models and cost
