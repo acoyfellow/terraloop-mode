@@ -26,3 +26,17 @@ test("classification tolerates malformed input without throwing", () => {
   expect(classifyTool("loops_task", null)).toBe("read");
   expect(classifyTool("edit", undefined)).toBe("mutate");
 });
+
+const mcpSpawnTools = ["mcp__terrarium__terrarium_spawn", "mcp__terrarium__terrarium_spawn_batch", "mcp__terrarium__terrarium_loop_start"] as const;
+
+test("the gate recognizes MCP-routed terrarium spawn tools", () => {
+  for (const name of mcpSpawnTools) {
+    expect(classifyTool(name, {})).toBe("spawn");
+  }
+});
+
+test("MCP-routed terrarium status and read tools stay reads", () => {
+  expect(classifyTool("mcp__terrarium__terrarium_status", {})).toBe("read");
+  expect(classifyTool("mcp__terrarium__terrarium_read", {})).toBe("read");
+  expect(classifyTool("mcp__terrarium__terrarium_loop_status", {})).toBe("read");
+});

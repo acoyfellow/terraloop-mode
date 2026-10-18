@@ -4,7 +4,13 @@ export type GateDecision = { allowed: true } | { allowed: false; reason: string 
 
 export type ToolIntent = "spawn" | "driver-create" | "driver-delete" | "mutate" | "read" | "terraloop-control";
 
-const spawnTools = new Set(["terrarium_terrarium_spawn", "terrarium_terrarium_spawn_batch"]);
+const spawnTools = new Set([
+  "terrarium_terrarium_spawn",
+  "terrarium_terrarium_spawn_batch",
+  "mcp__terrarium__terrarium_spawn",
+  "mcp__terrarium__terrarium_spawn_batch",
+  "mcp__terrarium__terrarium_loop_start",
+]);
 const mutationTools = new Set(["edit", "write", "hashline"]);
 const controlTools = new Set(["terraloop_control"]);
 
