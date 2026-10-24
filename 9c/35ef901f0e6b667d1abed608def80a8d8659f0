@@ -1,0 +1,31 @@
+skills/terraloop-reviews/SKILL.md
+  s_aff9605c3b4204::t_c4901268acd7c9 82-83
+skills/terraloop-reviews/claims.ts
+  s_aff9605c3b4204::t_4c66b89d110f9e 1-99
+skills/terraloop-reviews/lantern/build.sh
+  s_aff9605c3b4204::t_9244d4e2bb024a 1-18
+skills/terraloop-reviews/lantern/check.mjs
+  s_aff9605c3b4204::t_372454cf232e35 1-28
+skills/terraloop-reviews/lantern/register.mjs
+  s_aff9605c3b4204::t_a4e3fbaa284b25 1-19
+skills/terraloop-reviews/lantern/review-scene.ts
+  s_aff9605c3b4204::t_8f29beeddf70f4 1-48
+skills/terraloop-reviews/recipe-gate.sh
+  s_aff9605c3b4204::t_bb1bf3b663a466 20-23,40,80-84,120-136
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "9c35ef901f0e6b667d1abed608def80a8d8659f0",
+  "prompts": {},
+  "sessions": {
+    "s_aff9605c3b4204": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a0806f-f6e6-7378-a167-08e626c7de42",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Jordan Coeyman <jcoeyman@cloudflare.com>"
+    }
+  }
+}
