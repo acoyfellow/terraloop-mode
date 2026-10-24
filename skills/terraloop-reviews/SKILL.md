@@ -79,6 +79,8 @@ Folded in `<details>`:
 
 An approval with no findings still gets a 2-3 line "how I convinced myself" summary.
 
+Lantern: every note's Mermaid block also becomes a steppable explainer. Write `<iid>/lantern.json` with `title`, the note's exact `mermaid` source, and 2 or more `steps` (`name`, `caption`, `highlight` node ids, `tone` finding or fixed). Run `lantern/build.sh <iid>` with `LANTERN_DIR` set to a clone of github.com/ivarvong/lantern. It writes `<iid>/lantern/review-<iid>.html`, a text frame, and the motion verifier output. The `lantern` gate checks that the Mermaid matches the note, the page is built, and the verifier reports 0 events. Do not publish a page for an internal MR without the owner's OK.
+
 Pick the visual by finding type: logic or security bug, repro plus walk-through; data or state flow, Mermaid diagram; UI, screenshot or `unsurf` video; performance, a timing at realistic size; design gap, a scenario walk-through.
 
 ### GitLab Markdown tools

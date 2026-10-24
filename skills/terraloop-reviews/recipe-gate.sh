@@ -17,6 +17,10 @@ Gates:
   reconcile      reconcile.md names the live head
   convergence    p3.out has a VERDICT: line
   repro          REPRO_CMD (from teach/repro.env) exits non-zero at head
+  claims         note.md: every number in What I checked is found in the evidence
+                 (Clairic extracts, code compares, Clef rules when no number is found)
+  lantern        lantern.json reuses the note's mermaid, has >= 2 steps, is built,
+                 and the motion verifier reports 0 events (skip: REVIEW_SKIP_LANTERN=1)
   style          note.md: no arrows, no banned slop words, <= 3 bold spans outside <details>
   lesson         note.md: visible lines (outside <details>) <= 25, has a
                  mermaid block or image, a "Run it" command, and a
@@ -33,6 +37,7 @@ iid=$2
 dry_run=0
 [ "${3:-}" = "--dry-run" ] && dry_run=1
 dir=${REVIEW_RECIPE_DIR:-/tmp/rv/recipe}/$iid
+here=$(cd "$(dirname "$0")" && pwd)
 encoded=$(printf '%s' "$project" | sed 's|/|%2F|g')
 failures=0
 
@@ -72,7 +77,11 @@ if [ -f "$dir/teach/repro.env" ]; then
   if [ ! -d "$REPRO_CWD" ]; then
     fail repro "repro directory missing: $REPRO_CWD"
   elif (cd "$REPRO_CWD" && sh -c "$REPRO_CMD" >/dev/null 2>&1); then
-    fail repro "repro passes at head; it must fail"
+    if grep -q "$live_head" "$dir/teach/fixed.txt" 2>/dev/null; then
+      pass repro "earlier repro passes at head; fix confirmed (teach/fixed.txt)"
+    else
+      fail repro "repro passes at head; it must fail, or write teach/fixed.txt naming the head"
+    fi
   else
     pass repro "fails at head"
   fi
@@ -107,6 +116,23 @@ if [ -f "$note" ]; then
   if [ -z "$style" ]; then pass style "WRITING-GUIDE ok"; else fail style "$style"; fi
 else
   fail lesson "note.md missing"
+fi
+if [ -f "$note" ] && [ "${REVIEW_SKIP_LANTERN:-0}" != 1 ]; then
+  lantern_line=$(node "$here/lantern/check.mjs" "$dir" 2>&1 | tail -1)
+  case "$lantern_line" in
+    ok*) pass lantern "$lantern_line" ;;
+    *) fail lantern "$lantern_line" ;;
+  esac
+fi
+if [ -f "$note" ] && [ "${REVIEW_SKIP_CLAIMS:-0}" != 1 ]; then
+  claims_out=$(cd /Users/jcoeyman/.pi/agent/extensions/odds-pi && bun "$here/claims.ts" "$dir" 2>&1 | tail -3)
+  claims_exit=$?
+  claims_line=$(printf '%s' "$claims_out" | tail -1)
+  case "$claims_line" in
+    claims=*" bad=0") pass claims "$claims_line" ;;
+    claims=*) fail claims "$(printf '%s' "$claims_out" | head -1)" ;;
+    *) fail claims "checker error: $claims_line" ;;
+  esac
 fi
 
 if [ "$dry_run" = 1 ]; then
