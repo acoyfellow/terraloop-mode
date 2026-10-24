@@ -16,7 +16,7 @@ live=$(glab api "projects/$encoded/merge_requests/$iid" | jq -r '.state+" "+.sha
 [ "$live" = "opened $head" ] || { echo "$iid SKIP head moved: $live"; exit 1; }
 body_file=note.md
 if [ -f lantern/steps.png ] && [ "${REVIEW_SKIP_LANTERN:-0}" != 1 ]; then
-  upload=$(glab api -X POST "projects/$encoded/uploads" -F "file=@lantern/steps.png" | jq -r .markdown)
+  upload=$(GITLAB_HOST="${GITLAB_HOST:?set GITLAB_HOST}" bash "$here/lantern/upload.sh" "$PROJECT" lantern/steps.png 2>&1 | tail -1)
   case "$upload" in
     "!["*) ;;
     *) echo "$iid SKIP lantern upload failed: $upload"; exit 1 ;;
