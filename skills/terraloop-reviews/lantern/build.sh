@@ -14,5 +14,6 @@ npm run --silent see -- "review-$iid" > "$out/see.txt"
 npm run --silent verify:motion -- "review-$iid" > "$out/motion.txt" 2>&1
 node tools/build.ts --only="review-$iid" > /dev/null
 cp "out/review-$iid.html" "$out/review-$iid.html"
+npm run --silent shot -- "review-$iid" --out="$out/steps.png" > /dev/null
 npm run --silent trace -- "review-$iid" > "$out/trace.txt" 2>&1 || true
 echo "built $out/review-$iid.html"
