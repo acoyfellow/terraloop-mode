@@ -17,3 +17,6 @@ cp "out/review-$iid.html" "$out/review-$iid.html"
 npm run --silent shot -- "review-$iid" --out="$out/steps.png" > /dev/null
 npm run --silent trace -- "review-$iid" > "$out/trace.txt" 2>&1 || true
 echo "built $out/review-$iid.html"
+cp "$recipe/lantern/gif.ts" "$lantern/tools/gif.ts"
+node tools/gif.ts "review-$iid" "$out/review.gif" 10 800 > /dev/null
+test -s "$out/review.gif"

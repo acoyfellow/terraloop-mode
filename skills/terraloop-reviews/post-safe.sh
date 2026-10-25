@@ -15,8 +15,8 @@ dry=$(bash "$here/recipe-gate.sh" "$PROJECT" "$iid" --dry-run 2>&1 | tail -1)
 live=$(glab api "projects/$encoded/merge_requests/$iid" | jq -r '.state+" "+.sha')
 [ "$live" = "opened $head" ] || { echo "$iid SKIP head moved: $live"; exit 1; }
 body_file=note.md
-if [ -f lantern/steps.png ] && [ "${REVIEW_SKIP_LANTERN:-0}" != 1 ]; then
-  upload=$(GITLAB_HOST="${GITLAB_HOST:?set GITLAB_HOST}" bash "$here/lantern/upload.sh" "$PROJECT" lantern/steps.png 2>&1 | tail -1)
+if [ -f lantern/review.gif ] && [ "${REVIEW_SKIP_LANTERN:-0}" != 1 ]; then
+  upload=$(GITLAB_HOST="${GITLAB_HOST:?set GITLAB_HOST}" bash "$here/lantern/upload.sh" "$PROJECT" lantern/review.gif 2>&1 | tail -1)
   case "$upload" in
     "!["*) ;;
     *) echo "$iid SKIP lantern upload failed: $upload"; exit 1 ;;

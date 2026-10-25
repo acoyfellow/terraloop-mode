@@ -18,6 +18,7 @@ function verdict() {
   if (normalize(spec.mermaid ?? '') !== normalize(noteMermaid)) return 'lantern.json mermaid differs from the note';
   if (!Array.isArray(spec.steps) || spec.steps.length < 2) return 'needs at least 2 steps';
   if (!existsSync(pagePath)) return `not built: run lantern/build.sh ${iid}`;
+  if (!existsSync(`${dir}/lantern/review.gif`)) return `no animation: run lantern/build.sh ${iid}`;
   const motion = existsSync(motionPath) ? readFileSync(motionPath, 'utf8') : '';
   const events = motion.match(/(\d+) events/);
   if (!events) return 'motion verifier did not run';

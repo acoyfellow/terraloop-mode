@@ -1,18 +1,19 @@
 import sys
 
 note_path, image_markdown = sys.argv[1], sys.argv[2]
-lines = open(note_path).read().split("\n")
-caption = "Lantern steps, built from the diagram above:"
 out, in_mermaid, placed = [], False, False
-for line in lines:
-    out.append(line)
-    if line.startswith("```mermaid"):
+for line in open(note_path).read().split("\n"):
+    if not in_mermaid and line.startswith("```mermaid"):
         in_mermaid = True
-    elif in_mermaid and line.startswith("```"):
-        in_mermaid = False
-        if not placed:
-            out.extend(["", caption, "", image_markdown])
-            placed = True
+        continue
+    if in_mermaid:
+        if line.startswith("```"):
+            in_mermaid = False
+            if not placed:
+                out.append(image_markdown)
+                placed = True
+        continue
+    out.append(line)
 if not placed:
-    raise SystemExit("note has no mermaid block to place the Lantern image under")
+    raise SystemExit("note has no mermaid block to replace with the Lantern animation")
 sys.stdout.write("\n".join(out))
