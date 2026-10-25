@@ -42,6 +42,8 @@ bash <skill-dir>/gate.sh --queue \
 
 Run the queue gate with `nohup` and a result file. It can take minutes.
 
+Monitored projects (pass each as `--project`): `cloudflare/ai-agents/cloudflare-agent`, `cloudflare/ai-agents/cf-build-bench`, `cloudflare/ai-agents/clankd`, `cloudflare/ai-agents/sesh`.
+
 ## The recipe: one review
 
 Evidence lives in `$REVIEW_RECIPE_DIR/<iid>/` (default `/tmp/rv/recipe/<iid>/`). For a long loop, set `REVIEW_RECIPE_DIR` outside `/tmp`: a reboot clears `/tmp`, and with it the `gate-final.out` proof. Each step writes one file. `recipe-gate.sh` checks the files, not your narration.
