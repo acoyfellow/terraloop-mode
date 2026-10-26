@@ -5,6 +5,7 @@ import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-a
 import { classifyTool, consumeOverride, evaluate, outOfScopeShellWrite, outOfScopeSpawnPath, pathIsInScope, requestOverride } from "./gate.ts";
 import {
   contractIsComplete,
+  describePromptState,
   describeState,
   initialState,
   overrideBudget,
@@ -76,6 +77,8 @@ function onRamp(northStar: string, armedBy: "the user, by slash command" | "you,
     "Only the user can leave terraloop mode, with /terraloop-off.",
   ].join("\n");
 }
+
+const terraloopPromptSection = "terraloop";
 
 export default function terraloopMode(pi: ExtensionAPI) {
   let toolCallsThisRun = 0;
@@ -217,10 +220,13 @@ export default function terraloopMode(pi: ExtensionAPI) {
 
   pi.on("before_agent_start", (event, ctx) => {
     const state = readSessionState(ctx);
-    if (state.phase === "off") return undefined;
+    if (state.phase === "off") {
+      delete event.systemPromptOptions.sections[terraloopPromptSection];
+      return undefined;
+    }
     const rules = [
       `TERRALOOP MODE ACTIVE IN THIS PI SESSION — phase ${state.phase}.`,
-      describeState(state),
+      describePromptState(state),
       "",
       "This is enforced by a tool-call gate, not by your judgment:",
       "- armed: terrarium spawns and inline mutation are blocked until a contract is locked.",
@@ -229,7 +235,8 @@ export default function terraloopMode(pi: ExtensionAPI) {
       "Use terraloop_control action=override with a reason when an inline action is genuinely required.",
       "You cannot leave this mode or clear its state. Only the user can, with /terraloop-off.",
     ].join("\n");
-    return { systemPrompt: `${event.systemPrompt}\n\n${rules}` };
+    event.systemPromptOptions.sections[terraloopPromptSection] = rules;
+    return undefined;
   });
 
   pi.on("tool_result", (event, ctx) => {

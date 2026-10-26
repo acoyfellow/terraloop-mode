@@ -147,6 +147,14 @@ export function releaseState(state: LoopState, releasedAt = new Date().toISOStri
   return { ...initialState(), lastCompletedLoop };
 }
 
+export function describePromptState(state: LoopState): string {
+  const parts = [`terraloop: ${state.phase}`];
+  if (state.contract) parts.push(`goal=${state.contract.goal}`, `gate=${state.contract.gate}`, `scope=${state.contract.scope.join(",")}`, `proof=${state.contract.proof}`);
+  parts.push(`driver=${state.driverLoopId ?? "none"}`);
+  parts.push("Live counters: terraloop_control action=status.");
+  return parts.join(" | ");
+}
+
 export function describeState(state: LoopState): string {
   if (state.phase === "off") {
     return state.lastCompletedLoop
