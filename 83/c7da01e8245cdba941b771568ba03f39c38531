@@ -1,0 +1,43 @@
+extension.ts
+  s_eef53fed5dbf4c::t_f1b21ea1617c01 18,122-126
+proof.ts
+  s_aaa885f9224222::t_ecfd3210ffd434 19-29,45,52-57,61
+skills/terraloop-rank/SKILL.md
+  s_2065c5125668b9::t_c5ff7832236386 61
+tests/arming.test.ts
+  s_aaa885f9224222::t_7efecd46a999ce 45-50
+tests/proof-commands.test.ts
+  s_aaa885f9224222::t_b4cd589b5679c6 1-30
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "83c7da01e8245cdba941b771568ba03f39c38531",
+  "prompts": {},
+  "sessions": {
+    "s_2065c5125668b9": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a11c9e-fbb7-7768-b17a-0b53daf78bb6",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Jordan Coeyman <jcoeyman@cloudflare.com>"
+    },
+    "s_aaa885f9224222": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a11c8a-37e4-7010-8e5b-55d3cf7c925a",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Jordan Coeyman <jcoeyman@cloudflare.com>"
+    },
+    "s_eef53fed5dbf4c": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a17807-12a8-73c1-8696-b571a8717b28",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Jordan Coeyman <jcoeyman@cloudflare.com>"
+    }
+  }
+}
