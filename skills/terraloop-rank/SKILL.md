@@ -58,7 +58,7 @@ closes. An open experiment between those sessions is normal.
 - Public files contain totals only. No IPs, emails, user agents, or query strings. Round counts
   under 5.
 - Push to main is allowed for the site and for rank. Ask before you turn on any product that bills.
-- Never add a cron, alarm, or schedule for this loop. The user starts every iteration.
+- Never add a cron, alarm, or schedule that starts an iteration. The user starts every iteration. The one allowed schedule is the hourly data refresh in the rank Worker (`17 * * * *`), which only reads analytics and writes the KV snapshot.
 
 ## Data sources
 

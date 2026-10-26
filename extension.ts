@@ -15,7 +15,7 @@ import {
   writeState,
   type LoopState,
 } from "./state.ts";
-import { verifyProof } from "./proof.ts";
+import { proofProblem, verifyProof } from "./proof.ts";
 import { describeScreen, screenEvidence, type ClassifierLike } from "./evidence-screen.ts";
 import { settleTickDecision, settleTickMessage } from "./settle.ts";
 
@@ -118,6 +118,11 @@ export default function terraloopMode(pi: ExtensionAPI) {
         const contract = { goal: params.goal ?? "", gate: params.gate ?? "", scope: params.scope ?? [], proof: params.proof ?? "" };
         if (!contractIsComplete(contract)) {
           return text("lock rejected: goal, gate, scope, and proof are all required and must be non-empty.");
+        }
+        const problem = proofProblem(contract.proof);
+        if (problem) {
+          recordSessionAudit(ctx, { event: "lock-refused", detail: problem });
+          return text(`lock rejected: ${problem}. Give the exact command the gate will run, for example "bun test" or "./gate.sh".`);
         }
         const next = writeSessionState(ctx, { ...state, contract, gateReceipt: null });
         recordSessionAudit(ctx, { event: "lock", contract });

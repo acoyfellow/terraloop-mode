@@ -42,3 +42,9 @@ test("both arming paths record how the loop was armed", () => {
 test("no prompt-intent regex arms the gate", () => {
   expect(extensionSource).not.toMatch(/gogogogo|terraloop this|event\.prompt/);
 });
+
+test("lock refuses a proof with no runnable command", () => {
+  const lockBranch = extensionSource.slice(extensionSource.indexOf('params.action === "lock"'), extensionSource.indexOf("Contract locked."));
+  expect(lockBranch).toContain("proofProblem(contract.proof)");
+  expect(lockBranch).toContain('event: "lock-refused"');
+});
