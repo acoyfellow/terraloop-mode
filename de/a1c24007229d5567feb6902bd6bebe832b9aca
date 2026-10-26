@@ -1,0 +1,21 @@
+skills/terraloop-reviews/SKILL.md
+  s_aff9605c3b4204::t_1286daafa93033 68-69
+skills/terraloop-reviews/recipe-gate.sh
+  s_aff9605c3b4204::t_c730a65ee50be5 97-103,126
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "dea1c24007229d5567feb6902bd6bebe832b9aca",
+  "prompts": {},
+  "sessions": {
+    "s_aff9605c3b4204": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a0806f-f6e6-7378-a167-08e626c7de42",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Jordan Coeyman <jcoeyman@cloudflare.com>"
+    }
+  }
+}
