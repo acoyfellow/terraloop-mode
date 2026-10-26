@@ -65,6 +65,8 @@ Run `recipe-gate.sh … --dry-run` before posting. Run it without `--dry-run` af
 
 `repro.env` sets `REPRO_CWD` (a worktree at the head) and `REPRO_CMD`. Keep the worktree until the final gate run passes, then remove it.
 
+Follow-up review: when the author pushes a small fix for my own earlier finding and nothing else changes (check with `git range-diff`), write a short note instead of a full one. Add the line `review-kind: follow-up` above the footer. The gate then requires at most 10 visible lines, a `Run it` command and the `reviewed-sha:` footer. It skips the Mermaid, Lantern and GIF checks, and it fails if the note blocks or requests changes. Anything new or risky in the range gets a full review.
+
 ## Lesson format (the education layer)
 
 Short beats complete. Depth goes in `<details>`. Visible part:

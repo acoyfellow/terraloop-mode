@@ -94,7 +94,13 @@ if [ -f "$note" ]; then
   visible=$(awk '/<details>/{hidden=1} !hidden && NF{count++} /<\/details>/{hidden=0} END{print count+0}' "$note")
   problems=""
   [ "$visible" -le 25 ] || problems="$problems visible=$visible>25"
-  grep -qE '```mermaid|!\[' "$note" || problems="$problems no-visual"
+  followup=0
+  if grep -q '^review-kind: follow-up' "$note"; then
+    followup=1
+    [ "$visible" -le 10 ] || problems="$problems follow-up-visible=$visible>10"
+    grep -qiE 'BLOCK|request changes' "$note" && problems="$problems follow-up-cannot-block"
+  fi
+  [ "$followup" = 1 ] || grep -qE '```mermaid|!\[' "$note" || problems="$problems no-visual"
   grep -q 'Run it' "$note" || problems="$problems no-run-it"
   grep -qE "^(reviewed-sha|review-blocked):.*$live_head" "$note" || problems="$problems no-sha-footer"
   if [ -z "$problems" ]; then pass lesson "visible=$visible"; else fail lesson "$problems"; fi
@@ -117,7 +123,7 @@ if [ -f "$note" ]; then
 else
   fail lesson "note.md missing"
 fi
-if [ -f "$note" ] && [ "${REVIEW_SKIP_LANTERN:-0}" != 1 ]; then
+if [ -f "$note" ] && [ "${REVIEW_SKIP_LANTERN:-0}" != 1 ] && ! grep -q '^review-kind: follow-up' "$note"; then
   lantern_line=$(node "$here/lantern/check.mjs" "$dir" 2>&1 | tail -1)
   case "$lantern_line" in
     ok*) pass lantern "$lantern_line" ;;
