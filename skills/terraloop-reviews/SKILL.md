@@ -40,6 +40,8 @@ bash <skill-dir>/gate.sh --queue \
   --human-title '^(Release |\[ucascade\])'
 ```
 
+"What do I owe?" has one answer: `bash <skill-dir>/owed.sh`. It wraps the command above with the monitored projects and also counts MRs in other projects where Jordan is reviewer or assignee. Do not rewrite the queue logic inline.
+
 Run the queue gate with `nohup` and a result file. It can take minutes.
 
 Monitored projects (pass each as `--project`): `cloudflare/ai-agents/cloudflare-agent`, `cloudflare/ai-agents/cf-build-bench`, `cloudflare/ai-agents/clankd`, `cloudflare/ai-agents/sesh`.
