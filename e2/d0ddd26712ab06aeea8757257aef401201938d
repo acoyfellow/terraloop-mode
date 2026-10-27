@@ -1,0 +1,73 @@
+evals/full-stop/FROZEN.sha256
+  s_5f045b53b1dfb4::t_3c5143d2a6db2d 1
+evals/full-stop/changes/gh-automerge.json
+  s_5f045b53b1dfb4::t_9163a697cc52fb 1-26
+evals/full-stop/changes/gh-behind.json
+  s_5f045b53b1dfb4::t_e7d94dc9d3ae2b 1-24
+evals/full-stop/changes/gh-check-failed.json
+  s_5f045b53b1dfb4::t_a883116cd4cab7 1-19
+evals/full-stop/changes/gh-check-pending.json
+  s_5f045b53b1dfb4::t_c29adadc5e94bb 1-19
+evals/full-stop/changes/gh-closed.json
+  s_5f045b53b1dfb4::t_08a5e6f99dbd29 1-24
+evals/full-stop/changes/gh-conflict.json
+  s_5f045b53b1dfb4::t_97cdff0d4ad0e9 1-24
+evals/full-stop/changes/gh-draft.json
+  s_5f045b53b1dfb4::t_cf55746fa167d6 1-24
+evals/full-stop/changes/gh-merged.json
+  s_5f045b53b1dfb4::t_95c655991e3cd6 1-24
+evals/full-stop/changes/gh-no-checks.json
+  s_5f045b53b1dfb4::t_2f2f67f0840016 1-13
+evals/full-stop/changes/gh-ready.json
+  s_5f045b53b1dfb4::t_c6a5174ac4e1a4 1-24
+evals/full-stop/changes/gh-skipped-check.json
+  s_5f045b53b1dfb4::t_c42bbc5f7064ab 1-24
+evals/full-stop/changes/gh-unresolved.json
+  s_5f045b53b1dfb4::t_0fbcab6b0baaf3 1-27
+evals/full-stop/changes/gl-automerge.json
+  s_5f045b53b1dfb4::t_6f82c03955bb8b 1-12
+evals/full-stop/changes/gl-behind.json
+  s_5f045b53b1dfb4::t_5ed9827ef5d1e7 1-12
+evals/full-stop/changes/gl-closed.json
+  s_5f045b53b1dfb4::t_d7f5320e11cf9e 1-12
+evals/full-stop/changes/gl-conflict.json
+  s_5f045b53b1dfb4::t_f624f9cf356077 1-12
+evals/full-stop/changes/gl-draft.json
+  s_5f045b53b1dfb4::t_6e2e8c68d6f26e 1-12
+evals/full-stop/changes/gl-merged.json
+  s_5f045b53b1dfb4::t_2a19818ab8a8b1 1-12
+evals/full-stop/changes/gl-no-pipeline.json
+  s_5f045b53b1dfb4::t_8fc0e366de51ea 1-10
+evals/full-stop/changes/gl-pipeline-failed.json
+  s_5f045b53b1dfb4::t_59dae76b83a282 1-12
+evals/full-stop/changes/gl-pipeline-running.json
+  s_5f045b53b1dfb4::t_e9a12b89ab21dd 1-12
+evals/full-stop/changes/gl-pipeline-skipped.json
+  s_5f045b53b1dfb4::t_b5fc8a91c0e2ac 1-12
+evals/full-stop/changes/gl-ready.json
+  s_5f045b53b1dfb4::t_90d3cde6a4f90a 1-12
+evals/full-stop/changes/gl-unresolved.json
+  s_5f045b53b1dfb4::t_fa853cb7234f41 1-12
+evals/full-stop/merge-ready.jsonl
+  s_5f045b53b1dfb4::t_3d87066f879db8 1-26
+receipts/full-stop-baseline.json
+  s_5f045b53b1dfb4::t_257d01ff4fe84d 1-569
+scripts/full-stop-gate.sh
+  s_5f045b53b1dfb4::t_0f33c9c5a6fa0e 1-5
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "e2d0ddd26712ab06aeea8757257aef401201938d",
+  "prompts": {},
+  "sessions": {
+    "s_5f045b53b1dfb4": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a177a9-20df-71ac-82c2-3c2b52888d76",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Jordan Coeyman <jcoeyman@cloudflare.com>"
+    }
+  }
+}
