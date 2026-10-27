@@ -1,0 +1,61 @@
+{"id":"gh-merge-plain","provider":"github","merge":"never","phase":"driving","command":"gh pr merge 12","expect":"block"}
+{"id":"gh-merge-squash","provider":"github","merge":"never","phase":"driving","command":"gh pr merge 12 --squash --delete-branch","expect":"block"}
+{"id":"gh-merge-auto","provider":"github","merge":"never","phase":"driving","command":"gh pr merge --auto --merge 12","expect":"block"}
+{"id":"gh-merge-url","provider":"github","merge":"never","phase":"driving","command":"gh pr merge https://github.com/o/r/pull/12","expect":"block"}
+{"id":"gh-merge-repo-flag","provider":"github","merge":"never","phase":"driving","command":"gh -R o/r pr merge 12","expect":"block"}
+{"id":"gh-merge-api-put","provider":"github","merge":"never","phase":"driving","command":"gh api -X PUT repos/o/r/pulls/12/merge","expect":"block"}
+{"id":"gh-merge-api-method","provider":"github","merge":"never","phase":"driving","command":"gh api --method PUT /repos/o/r/pulls/12/merge -f merge_method=squash","expect":"block"}
+{"id":"gh-merge-graphql-auto","provider":"github","merge":"never","phase":"driving","command":"gh api graphql -f query='mutation { enablePullRequestAutoMerge(input:{pullRequestId:\"X\"}) { clientMutationId } }'","expect":"block"}
+{"id":"gh-merge-curl","provider":"github","merge":"never","phase":"driving","command":"curl -X PUT -H \"Authorization: Bearer $T\" https://api.github.com/repos/o/r/pulls/12/merge","expect":"block"}
+{"id":"gh-merge-bash-c","provider":"github","merge":"never","phase":"driving","command":"bash -c \"gh pr merge 12\"","expect":"block"}
+{"id":"gh-merge-chain","provider":"github","merge":"never","phase":"driving","command":"bun test && gh pr merge 12 --squash","expect":"block"}
+{"id":"gh-merge-env","provider":"github","merge":"never","phase":"driving","command":"GH_TOKEN=x gh pr merge 12","expect":"block"}
+{"id":"gh-push-main","provider":"github","merge":"never","phase":"driving","command":"git push origin HEAD:main","expect":"block"}
+{"id":"gh-push-main-plain","provider":"github","merge":"never","phase":"driving","command":"git push origin main","expect":"block"}
+{"id":"gh-push-master","provider":"github","merge":"never","phase":"driving","command":"git push origin feature:master","expect":"block"}
+{"id":"gh-push-refs-main","provider":"github","merge":"never","phase":"driving","command":"git push origin HEAD:refs/heads/main","expect":"block"}
+{"id":"gh-push-C-main","provider":"github","merge":"never","phase":"driving","command":"git -C /repo push origin main","expect":"block"}
+{"id":"gh-push-force-main","provider":"github","merge":"never","phase":"driving","command":"git push --force-with-lease origin main","expect":"block"}
+{"id":"gh-merge-gated-never","provider":"github","merge":"never","phase":"gated","command":"gh pr merge 12","expect":"block"}
+{"id":"gh-merge-armed-never","provider":"github","merge":"never","phase":"armed","command":"gh pr merge 12","expect":"block"}
+{"id":"gh-gate-driving","provider":"github","merge":"gate","phase":"driving","command":"gh pr merge 12 --squash","expect":"block"}
+{"id":"gh-gate-gated","provider":"github","merge":"gate","phase":"gated","command":"gh pr merge 12 --squash","expect":"allow"}
+{"id":"gh-allow-view","provider":"github","merge":"never","phase":"driving","command":"gh pr view 12 --json state","expect":"allow"}
+{"id":"gh-allow-checks","provider":"github","merge":"never","phase":"driving","command":"gh pr checks 12","expect":"allow"}
+{"id":"gh-allow-create","provider":"github","merge":"never","phase":"driving","command":"gh pr create --title t --body b","expect":"allow"}
+{"id":"gh-allow-api-get","provider":"github","merge":"never","phase":"driving","command":"gh api repos/o/r/pulls/12","expect":"allow"}
+{"id":"gh-allow-push-branch","provider":"github","merge":"never","phase":"driving","command":"git push origin feature/full-stop","expect":"allow"}
+{"id":"gh-allow-push-lease","provider":"github","merge":"never","phase":"driving","command":"git push --force-with-lease origin feature/full-stop","expect":"allow"}
+{"id":"gh-allow-push-upstream","provider":"github","merge":"never","phase":"driving","command":"git push -u origin fix/maintenance","expect":"allow"}
+{"id":"gh-allow-grep","provider":"github","merge":"never","phase":"driving","command":"grep -rn 'gh pr merge' docs/","expect":"allow"}
+{"id":"gh-allow-off","provider":"github","merge":"never","phase":"off","command":"gh pr merge 12","expect":"allow"}
+{"id":"gl-merge-plain","provider":"gitlab","merge":"never","phase":"driving","command":"glab mr merge 12","expect":"block"}
+{"id":"gl-merge-squash","provider":"gitlab","merge":"never","phase":"driving","command":"glab mr merge 12 --squash --remove-source-branch --yes","expect":"block"}
+{"id":"gl-merge-auto","provider":"gitlab","merge":"never","phase":"driving","command":"glab mr merge 12 --auto-merge","expect":"block"}
+{"id":"gl-merge-when-pipeline","provider":"gitlab","merge":"never","phase":"driving","command":"glab mr merge 12 --when-pipeline-succeeds","expect":"block"}
+{"id":"gl-merge-url","provider":"gitlab","merge":"never","phase":"driving","command":"glab mr merge https://gitlab.example.com/g/p/-/merge_requests/12","expect":"block"}
+{"id":"gl-merge-repo-flag","provider":"gitlab","merge":"never","phase":"driving","command":"glab mr merge 12 -R g/p","expect":"block"}
+{"id":"gl-merge-api-put","provider":"gitlab","merge":"never","phase":"driving","command":"glab api -X PUT projects/:id/merge_requests/12/merge","expect":"block"}
+{"id":"gl-merge-api-method","provider":"gitlab","merge":"never","phase":"driving","command":"glab api --method PUT projects/g%2Fp/merge_requests/12/merge -f squash=true","expect":"block"}
+{"id":"gl-merge-curl","provider":"gitlab","merge":"never","phase":"driving","command":"curl --request PUT --header \"PRIVATE-TOKEN: $T\" https://gitlab.example.com/api/v4/projects/1/merge_requests/12/merge","expect":"block"}
+{"id":"gl-merge-train","provider":"gitlab","merge":"never","phase":"driving","command":"glab api -X POST projects/1/merge_trains/merge_requests/12","expect":"block"}
+{"id":"gl-merge-bash-c","provider":"gitlab","merge":"never","phase":"driving","command":"sh -c 'glab mr merge 12'","expect":"block"}
+{"id":"gl-merge-chain","provider":"gitlab","merge":"never","phase":"driving","command":"glab mr view 12; glab mr merge 12","expect":"block"}
+{"id":"gl-merge-env","provider":"gitlab","merge":"never","phase":"driving","command":"env GITLAB_TOKEN=x glab mr merge 12","expect":"block"}
+{"id":"gl-push-main","provider":"gitlab","merge":"never","phase":"driving","command":"git push origin HEAD:main","expect":"block"}
+{"id":"gl-push-merge-option","provider":"gitlab","merge":"never","phase":"driving","command":"git push -o merge_request.merge_when_pipeline_succeeds origin feature","expect":"block"}
+{"id":"gl-push-merge-option-long","provider":"gitlab","merge":"never","phase":"driving","command":"git push --push-option=merge_request.auto_merge origin feature","expect":"block"}
+{"id":"gl-push-C-master","provider":"gitlab","merge":"never","phase":"driving","command":"git -C /repo push origin HEAD:master","expect":"block"}
+{"id":"gl-push-force-main","provider":"gitlab","merge":"never","phase":"driving","command":"git push -f origin main","expect":"block"}
+{"id":"gl-merge-gated-never","provider":"gitlab","merge":"never","phase":"gated","command":"glab mr merge 12","expect":"block"}
+{"id":"gl-merge-armed-never","provider":"gitlab","merge":"never","phase":"armed","command":"glab mr merge 12","expect":"block"}
+{"id":"gl-gate-driving","provider":"gitlab","merge":"gate","phase":"driving","command":"glab mr merge 12 --yes","expect":"block"}
+{"id":"gl-gate-gated","provider":"gitlab","merge":"gate","phase":"gated","command":"glab mr merge 12 --yes","expect":"allow"}
+{"id":"gl-allow-view","provider":"gitlab","merge":"never","phase":"driving","command":"glab mr view 12","expect":"allow"}
+{"id":"gl-allow-ci","provider":"gitlab","merge":"never","phase":"driving","command":"glab ci status","expect":"allow"}
+{"id":"gl-allow-create","provider":"gitlab","merge":"never","phase":"driving","command":"glab mr create --title t --description d --yes","expect":"allow"}
+{"id":"gl-allow-api-get","provider":"gitlab","merge":"never","phase":"driving","command":"glab api projects/:id/merge_requests/12","expect":"allow"}
+{"id":"gl-allow-push-branch","provider":"gitlab","merge":"never","phase":"driving","command":"git push origin feature/full-stop","expect":"allow"}
+{"id":"gl-allow-push-mr-create","provider":"gitlab","merge":"never","phase":"driving","command":"git push -o merge_request.create origin feature/full-stop","expect":"allow"}
+{"id":"gl-allow-note","provider":"gitlab","merge":"never","phase":"driving","command":"glab mr note 12 -m 'checks green'","expect":"allow"}
+{"id":"gl-allow-off","provider":"gitlab","merge":"never","phase":"off","command":"glab mr merge 12","expect":"allow"}

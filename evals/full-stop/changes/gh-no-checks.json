@@ -1,0 +1,13 @@
+{
+  "state": "OPEN",
+  "isDraft": false,
+  "mergeable": "MERGEABLE",
+  "mergeStateStatus": "CLEAN",
+  "autoMergeRequest": null,
+  "statusCheckRollup": [],
+  "reviewThreads": [
+    {
+      "isResolved": true
+    }
+  ]
+}

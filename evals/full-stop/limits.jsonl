@@ -1,0 +1,5 @@
+{"id":"python-subprocess","command":"python3 -c \"import subprocess; subprocess.run(['gh','pr','merge','12'])\"","why":"The command name is inside a string passed to another interpreter. A shell classifier cannot see it reliably."}
+{"id":"script-file","command":"./scripts/ship.sh","why":"The merge happens inside a script file the gate does not read."}
+{"id":"variable-command","command":"C=merge; gh pr $C 12","why":"Shell variable expansion builds the subcommand at run time."}
+{"id":"alias","command":"gh ship 12","why":"A gh alias can map to pr merge. The gate does not read gh config."}
+{"id":"web-ui","command":"open https://github.com/o/r/pull/12","why":"A human or browser automation can press Merge in the web UI. The tool_call gate covers shell and tool calls only."}

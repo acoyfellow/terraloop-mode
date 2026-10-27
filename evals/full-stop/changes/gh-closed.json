@@ -1,0 +1,24 @@
+{
+  "state": "CLOSED",
+  "isDraft": false,
+  "mergeable": "MERGEABLE",
+  "mergeStateStatus": "CLEAN",
+  "autoMergeRequest": null,
+  "statusCheckRollup": [
+    {
+      "name": "test",
+      "status": "COMPLETED",
+      "conclusion": "SUCCESS"
+    },
+    {
+      "name": "lint",
+      "status": "COMPLETED",
+      "conclusion": "SUCCESS"
+    }
+  ],
+  "reviewThreads": [
+    {
+      "isResolved": true
+    }
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "state": "opened",
+  "draft": false,
+  "has_conflicts": false,
+  "detailed_merge_status": "mergeable",
+  "merge_when_pipeline_succeeds": false,
+  "head_pipeline": null,
+  "blocking_discussions_resolved": true,
+  "diverged_commits_count": 0
+}

@@ -1,0 +1,19 @@
+{
+  "state": "OPEN",
+  "isDraft": false,
+  "mergeable": "MERGEABLE",
+  "mergeStateStatus": "CLEAN",
+  "autoMergeRequest": null,
+  "statusCheckRollup": [
+    {
+      "name": "test",
+      "status": "COMPLETED",
+      "conclusion": "FAILURE"
+    }
+  ],
+  "reviewThreads": [
+    {
+      "isResolved": true
+    }
+  ]
+}

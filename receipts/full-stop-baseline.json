@@ -1,0 +1,569 @@
+{
+  "eval": "full-stop",
+  "ranAt": "2026-10-27T16:16:43.177Z",
+  "evalSha256": "d347e985b453893e8e5dc78ab5631ce65a7a6375b2e0aee69805bb699913543c",
+  "score": 0.21839080459770116,
+  "passed": 19,
+  "cases": 87,
+  "byProvider": {
+    "github": "10/44",
+    "gitlab": "9/43"
+  },
+  "byKind": {
+    "gate": "19/61",
+    "mergeReady": "0/26"
+  },
+  "unscoredKnownLimits": [
+    "python-subprocess",
+    "script-file",
+    "variable-command",
+    "alias",
+    "web-ui"
+  ],
+  "failures": [
+    {
+      "id": "gh-merge-plain",
+      "kind": "gate",
+      "provider": "github",
+      "pass": false,
+      "expected": "block",
+      "actual": "allow"
+    },
+    {
+      "id": "gh-merge-squash",
+      "kind": "gate",
+      "provider": "github",
+      "pass": false,
+      "expected": "block",
+      "actual": "allow"
+    },
+    {
+      "id": "gh-merge-auto",
+      "kind": "gate",
+      "provider": "github",
+      "pass": false,
+      "expected": "block",
+      "actual": "allow"
+    },
+    {
+      "id": "gh-merge-url",
+      "kind": "gate",
+      "provider": "github",
+      "pass": false,
+      "expected": "block",
+      "actual": "allow"
+    },
+    {
+      "id": "gh-merge-repo-flag",
+      "kind": "gate",
+      "provider": "github",
+      "pass": false,
+      "expected": "block",
+      "actual": "allow"
+    },
+    {
+      "id": "gh-merge-api-put",
+      "kind": "gate",
+      "provider": "github",
+      "pass": false,
+      "expected": "block",
+      "actual": "allow"
+    },
+    {
+      "id": "gh-merge-api-method",
+      "kind": "gate",
+      "provider": "github",
+      "pass": false,
+      "expected": "block",
+      "actual": "allow"
+    },
+    {
+      "id": "gh-merge-graphql-auto",
+      "kind": "gate",
+      "provider": "github",
+      "pass": false,
+      "expected": "block",
+      "actual": "allow"
+    },
+    {
+      "id": "gh-merge-curl",
+      "kind": "gate",
+      "provider": "github",
+      "pass": false,
+      "expected": "block",
+      "actual": "allow"
+    },
+    {
+      "id": "gh-merge-bash-c",
+      "kind": "gate",
+      "provider": "github",
+      "pass": false,
+      "expected": "block",
+      "actual": "allow"
+    },
+    {
+      "id": "gh-merge-chain",
+      "kind": "gate",
+      "provider": "github",
+      "pass": false,
+      "expected": "block",
+      "actual": "allow"
+    },
+    {
+      "id": "gh-merge-env",
+      "kind": "gate",
+      "provider": "github",
+      "pass": false,
+      "expected": "block",
+      "actual": "allow"
+    },
+    {
+      "id": "gh-push-main",
+      "kind": "gate",
+      "provider": "github",
+      "pass": false,
+      "expected": "block",
+      "actual": "allow"
+    },
+    {
+      "id": "gh-push-main-plain",
+      "kind": "gate",
+      "provider": "github",
+      "pass": false,
+      "expected": "block",
+      "actual": "allow"
+    },
+    {
+      "id": "gh-push-master",
+      "kind": "gate",
+      "provider": "github",
+      "pass": false,
+      "expected": "block",
+      "actual": "allow"
+    },
+    {
+      "id": "gh-push-refs-main",
+      "kind": "gate",
+      "provider": "github",
+      "pass": false,
+      "expected": "block",
+      "actual": "allow"
+    },
+    {
+      "id": "gh-push-C-main",
+      "kind": "gate",
+      "provider": "github",
+      "pass": false,
+      "expected": "block",
+      "actual": "allow"
+    },
+    {
+      "id": "gh-push-force-main",
+      "kind": "gate",
+      "provider": "github",
+      "pass": false,
+      "expected": "block",
+      "actual": "allow"
+    },
+    {
+      "id": "gh-merge-gated-never",
+      "kind": "gate",
+      "provider": "github",
+      "pass": false,
+      "expected": "block",
+      "actual": "allow"
+    },
+    {
+      "id": "gh-merge-armed-never",
+      "kind": "gate",
+      "provider": "github",
+      "pass": false,
+      "expected": "block",
+      "actual": "allow"
+    },
+    {
+      "id": "gh-gate-driving",
+      "kind": "gate",
+      "provider": "github",
+      "pass": false,
+      "expected": "block",
+      "actual": "allow"
+    },
+    {
+      "id": "gl-merge-plain",
+      "kind": "gate",
+      "provider": "gitlab",
+      "pass": false,
+      "expected": "block",
+      "actual": "allow"
+    },
+    {
+      "id": "gl-merge-squash",
+      "kind": "gate",
+      "provider": "gitlab",
+      "pass": false,
+      "expected": "block",
+      "actual": "allow"
+    },
+    {
+      "id": "gl-merge-auto",
+      "kind": "gate",
+      "provider": "gitlab",
+      "pass": false,
+      "expected": "block",
+      "actual": "allow"
+    },
+    {
+      "id": "gl-merge-when-pipeline",
+      "kind": "gate",
+      "provider": "gitlab",
+      "pass": false,
+      "expected": "block",
+      "actual": "allow"
+    },
+    {
+      "id": "gl-merge-url",
+      "kind": "gate",
+      "provider": "gitlab",
+      "pass": false,
+      "expected": "block",
+      "actual": "allow"
+    },
+    {
+      "id": "gl-merge-repo-flag",
+      "kind": "gate",
+      "provider": "gitlab",
+      "pass": false,
+      "expected": "block",
+      "actual": "allow"
+    },
+    {
+      "id": "gl-merge-api-put",
+      "kind": "gate",
+      "provider": "gitlab",
+      "pass": false,
+      "expected": "block",
+      "actual": "allow"
+    },
+    {
+      "id": "gl-merge-api-method",
+      "kind": "gate",
+      "provider": "gitlab",
+      "pass": false,
+      "expected": "block",
+      "actual": "allow"
+    },
+    {
+      "id": "gl-merge-curl",
+      "kind": "gate",
+      "provider": "gitlab",
+      "pass": false,
+      "expected": "block",
+      "actual": "allow"
+    },
+    {
+      "id": "gl-merge-train",
+      "kind": "gate",
+      "provider": "gitlab",
+      "pass": false,
+      "expected": "block",
+      "actual": "allow"
+    },
+    {
+      "id": "gl-merge-bash-c",
+      "kind": "gate",
+      "provider": "gitlab",
+      "pass": false,
+      "expected": "block",
+      "actual": "allow"
+    },
+    {
+      "id": "gl-merge-chain",
+      "kind": "gate",
+      "provider": "gitlab",
+      "pass": false,
+      "expected": "block",
+      "actual": "allow"
+    },
+    {
+      "id": "gl-merge-env",
+      "kind": "gate",
+      "provider": "gitlab",
+      "pass": false,
+      "expected": "block",
+      "actual": "allow"
+    },
+    {
+      "id": "gl-push-main",
+      "kind": "gate",
+      "provider": "gitlab",
+      "pass": false,
+      "expected": "block",
+      "actual": "allow"
+    },
+    {
+      "id": "gl-push-merge-option",
+      "kind": "gate",
+      "provider": "gitlab",
+      "pass": false,
+      "expected": "block",
+      "actual": "allow"
+    },
+    {
+      "id": "gl-push-merge-option-long",
+      "kind": "gate",
+      "provider": "gitlab",
+      "pass": false,
+      "expected": "block",
+      "actual": "allow"
+    },
+    {
+      "id": "gl-push-C-master",
+      "kind": "gate",
+      "provider": "gitlab",
+      "pass": false,
+      "expected": "block",
+      "actual": "allow"
+    },
+    {
+      "id": "gl-push-force-main",
+      "kind": "gate",
+      "provider": "gitlab",
+      "pass": false,
+      "expected": "block",
+      "actual": "allow"
+    },
+    {
+      "id": "gl-merge-gated-never",
+      "kind": "gate",
+      "provider": "gitlab",
+      "pass": false,
+      "expected": "block",
+      "actual": "allow"
+    },
+    {
+      "id": "gl-merge-armed-never",
+      "kind": "gate",
+      "provider": "gitlab",
+      "pass": false,
+      "expected": "block",
+      "actual": "allow"
+    },
+    {
+      "id": "gl-gate-driving",
+      "kind": "gate",
+      "provider": "gitlab",
+      "pass": false,
+      "expected": "block",
+      "actual": "allow"
+    },
+    {
+      "id": "gh-ready",
+      "kind": "merge-ready",
+      "provider": "github",
+      "pass": false,
+      "expected": "exit 0",
+      "actual": "bin/merge-ready missing"
+    },
+    {
+      "id": "gh-check-failed",
+      "kind": "merge-ready",
+      "provider": "github",
+      "pass": false,
+      "expected": "exit 1",
+      "actual": "bin/merge-ready missing"
+    },
+    {
+      "id": "gh-check-pending",
+      "kind": "merge-ready",
+      "provider": "github",
+      "pass": false,
+      "expected": "exit 1",
+      "actual": "bin/merge-ready missing"
+    },
+    {
+      "id": "gh-conflict",
+      "kind": "merge-ready",
+      "provider": "github",
+      "pass": false,
+      "expected": "exit 1",
+      "actual": "bin/merge-ready missing"
+    },
+    {
+      "id": "gh-behind",
+      "kind": "merge-ready",
+      "provider": "github",
+      "pass": false,
+      "expected": "exit 1",
+      "actual": "bin/merge-ready missing"
+    },
+    {
+      "id": "gh-unresolved",
+      "kind": "merge-ready",
+      "provider": "github",
+      "pass": false,
+      "expected": "exit 1",
+      "actual": "bin/merge-ready missing"
+    },
+    {
+      "id": "gh-draft",
+      "kind": "merge-ready",
+      "provider": "github",
+      "pass": false,
+      "expected": "exit 1",
+      "actual": "bin/merge-ready missing"
+    },
+    {
+      "id": "gh-closed",
+      "kind": "merge-ready",
+      "provider": "github",
+      "pass": false,
+      "expected": "exit 1",
+      "actual": "bin/merge-ready missing"
+    },
+    {
+      "id": "gh-merged",
+      "kind": "merge-ready",
+      "provider": "github",
+      "pass": false,
+      "expected": "exit 1",
+      "actual": "bin/merge-ready missing"
+    },
+    {
+      "id": "gh-automerge",
+      "kind": "merge-ready",
+      "provider": "github",
+      "pass": false,
+      "expected": "exit 1",
+      "actual": "bin/merge-ready missing"
+    },
+    {
+      "id": "gh-no-checks",
+      "kind": "merge-ready",
+      "provider": "github",
+      "pass": false,
+      "expected": "exit 0",
+      "actual": "bin/merge-ready missing"
+    },
+    {
+      "id": "gh-skipped-check",
+      "kind": "merge-ready",
+      "provider": "github",
+      "pass": false,
+      "expected": "exit 0",
+      "actual": "bin/merge-ready missing"
+    },
+    {
+      "id": "gl-ready",
+      "kind": "merge-ready",
+      "provider": "gitlab",
+      "pass": false,
+      "expected": "exit 0",
+      "actual": "bin/merge-ready missing"
+    },
+    {
+      "id": "gl-pipeline-failed",
+      "kind": "merge-ready",
+      "provider": "gitlab",
+      "pass": false,
+      "expected": "exit 1",
+      "actual": "bin/merge-ready missing"
+    },
+    {
+      "id": "gl-pipeline-running",
+      "kind": "merge-ready",
+      "provider": "gitlab",
+      "pass": false,
+      "expected": "exit 1",
+      "actual": "bin/merge-ready missing"
+    },
+    {
+      "id": "gl-conflict",
+      "kind": "merge-ready",
+      "provider": "gitlab",
+      "pass": false,
+      "expected": "exit 1",
+      "actual": "bin/merge-ready missing"
+    },
+    {
+      "id": "gl-behind",
+      "kind": "merge-ready",
+      "provider": "gitlab",
+      "pass": false,
+      "expected": "exit 1",
+      "actual": "bin/merge-ready missing"
+    },
+    {
+      "id": "gl-unresolved",
+      "kind": "merge-ready",
+      "provider": "gitlab",
+      "pass": false,
+      "expected": "exit 1",
+      "actual": "bin/merge-ready missing"
+    },
+    {
+      "id": "gl-draft",
+      "kind": "merge-ready",
+      "provider": "gitlab",
+      "pass": false,
+      "expected": "exit 1",
+      "actual": "bin/merge-ready missing"
+    },
+    {
+      "id": "gl-closed",
+      "kind": "merge-ready",
+      "provider": "gitlab",
+      "pass": false,
+      "expected": "exit 1",
+      "actual": "bin/merge-ready missing"
+    },
+    {
+      "id": "gl-merged",
+      "kind": "merge-ready",
+      "provider": "gitlab",
+      "pass": false,
+      "expected": "exit 1",
+      "actual": "bin/merge-ready missing"
+    },
+    {
+      "id": "gl-automerge",
+      "kind": "merge-ready",
+      "provider": "gitlab",
+      "pass": false,
+      "expected": "exit 1",
+      "actual": "bin/merge-ready missing"
+    },
+    {
+      "id": "gl-no-pipeline",
+      "kind": "merge-ready",
+      "provider": "gitlab",
+      "pass": false,
+      "expected": "exit 0",
+      "actual": "bin/merge-ready missing"
+    },
+    {
+      "id": "gl-pipeline-skipped",
+      "kind": "merge-ready",
+      "provider": "gitlab",
+      "pass": false,
+      "expected": "exit 0",
+      "actual": "bin/merge-ready missing"
+    },
+    {
+      "id": "bad-url",
+      "kind": "merge-ready",
+      "provider": "github",
+      "pass": false,
+      "expected": "exit 2",
+      "actual": "bin/merge-ready missing"
+    },
+    {
+      "id": "gl-bad-url",
+      "kind": "merge-ready",
+      "provider": "gitlab",
+      "pass": false,
+      "expected": "exit 2",
+      "actual": "bin/merge-ready missing"
+    }
+  ]
+}
