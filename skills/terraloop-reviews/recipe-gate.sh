@@ -58,7 +58,7 @@ fi
 names_head() { grep -q "$live_head" "$dir/$1" 2>/dev/null; }
 
 pipeline_status=$(printf '%s' "$live" | jq -r '.head_pipeline.status // "none"')
-if [ -f "$dir/receipt.md" ] && grep -qi '^VERDICT: approve' "$dir/receipt.md" && [ "$pipeline_status" = failed ]; then
+if [ -f "$dir/receipt.md" ] && grep -q "^HEAD: $live_head$" "$dir/receipt.md" && grep -qi '^VERDICT: approve' "$dir/receipt.md" && [ "$pipeline_status" = failed ]; then
   fail ci "approved while head pipeline is failed"
 else
   pass ci "pipeline=$pipeline_status"
