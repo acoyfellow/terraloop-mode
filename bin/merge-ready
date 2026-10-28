@@ -1,0 +1,56 @@
+#!/usr/bin/env bun
+import { spawnSync } from "node:child_process";
+import { readFileSync } from "node:fs";
+import { readiness, type Change } from "../merge-ready/change.ts";
+import { fromGithub, githubFetchCommands, type GithubPullRequest } from "../merge-ready/github.ts";
+import { fromGitlab, gitlabFetchCommand, type GitlabMergeRequest } from "../merge-ready/gitlab.ts";
+import { describeTarget, parseChangeUrl, type ChangeTarget } from "../merge-ready/url.ts";
+
+const usage = "usage: merge-ready <github pull request url | gitlab merge request url>\nexit 0 ready, 1 not ready, 2 bad input or fetch error";
+
+function fail(message: string): never {
+  console.error(message);
+  process.exit(2);
+}
+
+function runJson(command: string[]): unknown {
+  const [program, ...args] = command as [string, ...string[]];
+  const result = spawnSync(program, args, { encoding: "utf8", timeout: 30_000 });
+  if (result.status !== 0) fail(`${program} failed: ${(result.stderr || result.stdout || "").trim()}`);
+  return JSON.parse(result.stdout);
+}
+
+function loadChange(target: ChangeTarget): Change {
+  const fixture = process.env.MERGE_READY_FIXTURE;
+  if (fixture) {
+    const raw = JSON.parse(readFileSync(fixture, "utf8"));
+    return target.provider === "github" ? fromGithub(raw as GithubPullRequest) : fromGitlab(raw as GitlabMergeRequest);
+  }
+  if (target.provider === "github") {
+    const commands = githubFetchCommands(target);
+    const view = runJson(commands.view) as Omit<GithubPullRequest, "reviewThreads">;
+    const threads = runJson(commands.threads) as GithubPullRequest["reviewThreads"];
+    return fromGithub({ ...view, reviewThreads: threads ?? [] });
+  }
+  return fromGitlab(runJson(gitlabFetchCommand(target)) as GitlabMergeRequest);
+}
+
+const input = process.argv[2];
+if (!input) fail(usage);
+const target = parseChangeUrl(input);
+if (!target) fail(`not a GitHub pull request or GitLab merge request URL: ${input}\n${usage}`);
+
+let change: Change;
+try {
+  change = loadChange(target);
+} catch (error) {
+  fail(`could not read ${describeTarget(target)}: ${(error as Error).message}`);
+}
+
+const verdict = readiness(change);
+if (verdict.ready) {
+  console.log(`ready (${describeTarget(target)})`);
+  process.exit(0);
+}
+console.log(`not ready (${describeTarget(target)}): ${verdict.reasons.join("; ")}`);
+process.exit(1);

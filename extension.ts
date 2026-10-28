@@ -19,6 +19,7 @@ import {
 import { proofProblem, verifyProof } from "./proof.ts";
 import { describeScreen, screenEvidence, type ClassifierLike } from "./evidence-screen.ts";
 import { settleTickDecision, settleTickMessage } from "./settle.ts";
+import { evaluateMerge, findMergeAction, parseMergeMode } from "./merge-guard.ts";
 
 const controlParameters = Type.Object({
   action: StringEnum(["arm", "lock", "override", "status", "gate"] as const),
@@ -29,6 +30,7 @@ const controlParameters = Type.Object({
   proof: Type.Optional(Type.String({ description: "Exact command or receipt that proves each step. Required for lock." })),
   reason: Type.Optional(Type.String({ description: "Why an inline action is required. Required for override." })),
   calls: Type.Optional(Type.Number({ description: "How many inline mutations the override covers. Default 1." })),
+  merge: Type.Optional(StringEnum(["never", "gate"] as const, { description: "For lock. never (default, full stop): merges are blocked for the whole loop. gate: merges are allowed only after action=gate verifies the proof." })),
 });
 
 const LOOPS_STOP_EVENT = "loops:stop";
@@ -118,7 +120,7 @@ export default function terraloopMode(pi: ExtensionAPI) {
       }
 
       if (params.action === "lock") {
-        const contract = { goal: params.goal ?? "", gate: params.gate ?? "", scope: params.scope ?? [], proof: params.proof ?? "" };
+        const contract = { goal: params.goal ?? "", gate: params.gate ?? "", scope: params.scope ?? [], proof: params.proof ?? "", merge: parseMergeMode(params.merge) };
         if (!contractIsComplete(contract)) {
           return text("lock rejected: goal, gate, scope, and proof are all required and must be non-empty.");
         }
@@ -318,6 +320,16 @@ export default function terraloopMode(pi: ExtensionAPI) {
     toolCallsThisRun += 1;
     const state = readSessionState(ctx);
     if (state.phase === "off") return undefined;
+
+    if (event.toolName === "bash") {
+      const command = (event.input as { command?: unknown } | null)?.command;
+      const action = typeof command === "string" ? findMergeAction(command) : null;
+      const mergeDecision = evaluateMerge(state.phase, parseMergeMode(state.contract?.merge), action);
+      if (!mergeDecision.allowed) {
+        recordSessionAudit(ctx, { event: "blocked", toolName: event.toolName, intent: "merge", phase: state.phase, reason: mergeDecision.reason });
+        return { block: true, reason: mergeDecision.reason };
+      }
+    }
 
     const intent = classifyTool(event.toolName, event.input);
     if (intent === "read" || intent === "terraloop-control") return undefined;

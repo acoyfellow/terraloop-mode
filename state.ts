@@ -10,6 +10,7 @@ export type Contract = {
   gate: string;
   scope: readonly string[];
   proof: string;
+  merge?: "never" | "gate";
 };
 
 export type OverrideGrant = {

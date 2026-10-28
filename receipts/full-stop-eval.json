@@ -1,0 +1,24 @@
+{
+  "eval": "full-stop",
+  "ranAt": "2026-10-27T16:20:05.322Z",
+  "evalSha256": "d347e985b453893e8e5dc78ab5631ce65a7a6375b2e0aee69805bb699913543c",
+  "score": 1,
+  "passed": 87,
+  "cases": 87,
+  "byProvider": {
+    "github": "44/44",
+    "gitlab": "43/43"
+  },
+  "byKind": {
+    "gate": "61/61",
+    "mergeReady": "26/26"
+  },
+  "unscoredKnownLimits": [
+    "python-subprocess",
+    "script-file",
+    "variable-command",
+    "alias",
+    "web-ui"
+  ],
+  "failures": []
+}
