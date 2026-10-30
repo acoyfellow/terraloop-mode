@@ -120,6 +120,7 @@ Humor is optional. Use it only when it does one of three jobs: it makes the poin
 
 - Never merge, push, rebase, or edit a colleague's branch. Reviews are notes, discussions, approve, and unapprove only.
 - Never approve with a proven blocker, or while a person has an unresolved blocking thread, or on a `HUMAN` MR.
+- Never touch automatic MRs (ucascade promotions, bot authors such as `gsa_ax`): no review, no note, no approval. Skip them in the queue.
 - Never approve, or say "approval stands", while the head pipeline is `failed`. Read the failing job log first. If the failure comes from this MR, it is a blocker. If it comes from a stack parent, withdraw and point at the parent. `recipe-gate.sh` checks this (`ci`).
 - A re-review runs the tests the change can break, not only the tests the new commit touched. A changed shared type or table list breaks distant fixtures.
 - Re-fetch head and state immediately before posting. If the head moved, the review is `STALE`; redo it.
@@ -171,3 +172,7 @@ The loop ends only when the user stops it, `/terraloop-off` runs, or the contrac
 ## Planned, not installed
 
 `~/cloudflare/review-broker` is a credential broker that would make merging impossible for the reviewer. It is not installed. Do not assume it. Reviews run on the user's token under the rules above.
+
+## Fan-out (parallel by default)
+
+Use `recipe/fanout.sh <project>!<iid> ...` to prep and launch up to 6 MRs at once. Each MR gets its own recipe folder `ns-<repo>/<iid>` (the repo name in the folder stops `!2` in two repos from colliding), a worktree at the live head, task files, and two detached passes. A previous head in `ns-<repo>/<iid>.last-head` turns the passes into a re-review of that delta. Run gates with `REVIEW_RECIPE_DIR=recipe/ns-<repo>`. Detached passes show in `ps` as plain `pi`, so count them with `pgrep -x pi`, not `pgrep -f "pi -p"`. For huge monorepos (stratus), use a sparse worktree of the touched packages only.
