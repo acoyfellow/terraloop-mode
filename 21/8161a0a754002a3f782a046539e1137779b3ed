@@ -1,0 +1,21 @@
+skills/terraloop-reviews/SKILL.md
+  s_aff9605c3b4204::t_11c9bec53d4637 123,175-178
+skills/terraloop-reviews/fanout.sh
+  s_aff9605c3b4204::t_2e02178e5913fa 1-48
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "218161a0a754002a3f782a046539e1137779b3ed",
+  "prompts": {},
+  "sessions": {
+    "s_aff9605c3b4204": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a0806f-f6e6-7378-a167-08e626c7de42",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Jordan Coeyman <jcoeyman@cloudflare.com>"
+    }
+  }
+}
