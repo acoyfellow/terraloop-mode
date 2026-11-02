@@ -5,6 +5,9 @@ description: Start a reusable Terraloop for GitLab merge-request reviews. Use wh
 
 # Review Terraloop
 
+> The scripts and rules now live in the review-process repository (`$REVIEW_HOME`, usually `~/cloudflare/review-process/scripts`). Source its `reviews/fanout.env`, then run `$REVIEW_HOME/<script>`. Every posted review is committed and pushed to that repository's main by `record.sh`. The copies in this folder are frozen and are kept only for older loops.
+
+
 A review loop keeps the user's review queue empty. Each review is proven, reproducible, and teaches the reader why. The queue is live: the gate discovers it on every run.
 
 ```text
