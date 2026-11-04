@@ -85,6 +85,7 @@ Work states: `MOVE`, `MR_WORK`, `BUILD`, `TRIAGE`, `STALE`, `DECIDED`. Quiet sta
 ### Known gate limits
 
 - Once the loop reaches its stop gate, the gate blocks `git push` and can block every shell command, even with override grants left (20 per loop). Push and run full suites while the loop is driving. If the loop is gated and a push is needed, ask the user for `/terraloop-off` and a new lock.
+- `action=gate` splits the lock's `proof` on `;`, even inside quotes, so `perl -e 'alarm 110; exec @ARGV' ...` fails there. Lock with a proof that has no `;`, such as `timeout 110 bash` plus the gate path, writing to `gate.out` and then `tail -1`.
 - Hooks may block a command that names `gate.sh` with no time limit. Run it as `perl -e 'alarm 110; exec @ARGV' bash <skill-dir>/gate.sh` or under `nohup`.
 
 ## Dry run
