@@ -1,4 +1,5 @@
 import { contractIsComplete, type LoopState } from "./state.ts";
+import { isCredentialPath } from "./credentials.ts";
 
 export type GateDecision = { allowed: true } | { allowed: false; reason: string };
 
@@ -211,4 +212,11 @@ export function protectedTarget(toolName: string, input: unknown, home: string, 
     if (touched && !readOnlyVerbs.has(segmentVerb(segment))) return touched;
   }
   return null;
+}
+
+export function credentialAccess(input: unknown, home: string): string | null {
+  const record = (input ?? {}) as { command?: unknown; path?: unknown };
+  if (typeof record.path === "string" && isCredentialPath(expandHome(record.path, home))) return record.path;
+  if (typeof record.command !== "string") return null;
+  return pathTokens(record.command, home).find(isCredentialPath) ?? null;
 }

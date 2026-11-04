@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 import { Type } from "typebox";
 import { StringEnum } from "@earendil-works/pi-ai";
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
-import { classifyTool, consumeOverride, evaluate, outOfScopeShellWrite, outOfScopeSpawnPath, pathIsInScope, protectedTarget, requestOverride } from "./gate.ts";
+import { classifyTool, consumeOverride, credentialAccess, evaluate, outOfScopeShellWrite, outOfScopeSpawnPath, pathIsInScope, protectedTarget, requestOverride } from "./gate.ts";
 
 const gateRoot = dirname(fileURLToPath(import.meta.url));
 import {
@@ -333,6 +333,12 @@ export default function terraloopMode(pi: ExtensionAPI) {
         recordSessionAudit(ctx, { event: "blocked", toolName: event.toolName, intent: "merge", phase: state.phase, reason: mergeDecision.reason });
         return { block: true, reason: mergeDecision.reason };
       }
+    }
+
+    const secret = credentialAccess(event.input, homedir());
+    if (secret) {
+      recordSessionAudit(ctx, { event: "blocked", toolName: event.toolName, phase: state.phase, detail: "credential access" });
+      return { block: true, reason: `terraloop does not let the agent read or change credential files (${secret}). Tools that need a credential must get it injected, not read it. An override does not lift this.` };
     }
 
     const guarded = protectedTarget(event.toolName, event.input, homedir(), gateRoot);
