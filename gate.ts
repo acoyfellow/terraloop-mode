@@ -178,3 +178,37 @@ export function requestOverride(state: LoopState, reason: string, requestedCalls
     },
   };
 }
+
+const readOnlyVerbs = new Set(["cat", "head", "tail", "less", "grep", "rg", "wc", "ls", "stat", "jq", "diff", "file", "sha256sum", "shasum", "md5"]);
+
+function protectedPath(path: string, home: string, gateRoot: string): boolean {
+  if (path.startsWith(`${home}/.terrarium/terraloop-state`)) return true;
+  if (path === `${home}/.terrarium/terraloop-audit.jsonl`) return true;
+  if (!path.startsWith(`${gateRoot}/`)) return false;
+  const relative = path.slice(gateRoot.length + 1);
+  return !relative.startsWith("skills/") && !relative.endsWith(".md");
+}
+
+function pathTokens(text: string, home: string): string[] {
+  return [...text.matchAll(/(~\/|\/)[^\s'"`;&|()<>]+/g)].map((match) => expandHome(match[0], home));
+}
+
+function segmentVerb(segment: string): string {
+  return segment.trim().split(/\s+/)[0] ?? "";
+}
+
+export function protectedTarget(toolName: string, input: unknown, home: string, gateRoot: string): string | null {
+  const record = (input ?? {}) as { path?: unknown; command?: unknown };
+  if (toolName !== "bash") {
+    return typeof record.path === "string" && protectedPath(expandHome(record.path, home), home, gateRoot) ? record.path : null;
+  }
+  if (typeof record.command !== "string") return null;
+  for (const path of shellWriteTargets(record.command, home)) {
+    if (protectedPath(path, home, gateRoot)) return path;
+  }
+  for (const segment of record.command.split(/&&|\|\||[;|\n]/)) {
+    const touched = pathTokens(segment, home).find((path) => protectedPath(path, home, gateRoot));
+    if (touched && !readOnlyVerbs.has(segmentVerb(segment))) return touched;
+  }
+  return null;
+}

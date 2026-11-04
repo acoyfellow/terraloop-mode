@@ -4,6 +4,8 @@ const gateRepo = "/home/u/.pi/agent/git/github.com/acoyfellow/terraloop-mode";
 const stateDir = "/home/u/.terrarium";
 const bash = (command: string) => ({ command });
 
+export const attackGateRoot = gateRepo;
+
 export const attackScope = [gateRepo, stateDir];
 
 const attack = (id: string, toolName: string, input: Record<string, unknown>, why: string): B2Case => ({ id, phase: "driving", toolName, input, expect: "block", why });

@@ -2,12 +2,12 @@ import { appendFileSync, existsSync, readFileSync } from "node:fs";
 import { execSync } from "node:child_process";
 import { homedir } from "node:os";
 import { join } from "node:path";
-import { classifyTool, evaluate, outOfScopeShellWrite, outOfScopeSpawnPath, pathIsInScope } from "../gate.ts";
+import { classifyTool, evaluate, outOfScopeShellWrite, outOfScopeSpawnPath, pathIsInScope, protectedTarget } from "../gate.ts";
 import { settleTickDecision } from "../settle.ts";
 import { initialState, type LoopState } from "../state.ts";
 import { cases, home, scope, type B2Case } from "./b2-cases.ts";
 import { scenario } from "./b3-scenario.ts";
-import { attackScope, attacks } from "./b9-attacks.ts";
+import { attackGateRoot, attackScope, attacks } from "./b9-attacks.ts";
 
 const contract = { goal: "g", gate: "b", scope: [...scope], proof: "bun test" };
 
@@ -15,6 +15,7 @@ const stateFor = (phase: B2Case["phase"]): LoopState => ({ ...initialState(), ph
 
 const decide = (testCase: B2Case, caseScope: readonly string[] = scope): "allow" | "block" => {
   const state = { ...stateFor(testCase.phase), contract: { ...contract, scope: [...caseScope] } };
+  if (protectedTarget(testCase.toolName, testCase.input, home, attackGateRoot)) return "block";
   const intent = classifyTool(testCase.toolName, testCase.input);
   if (intent === "read" || intent === "terraloop-control") return "allow";
   if (intent === "mutate" && state.phase === "driving") {

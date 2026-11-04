@@ -1,8 +1,12 @@
 import { homedir } from "node:os";
+import { dirname } from "node:path";
+import { fileURLToPath } from "node:url";
 import { Type } from "typebox";
 import { StringEnum } from "@earendil-works/pi-ai";
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
-import { classifyTool, consumeOverride, evaluate, outOfScopeShellWrite, outOfScopeSpawnPath, pathIsInScope, requestOverride } from "./gate.ts";
+import { classifyTool, consumeOverride, evaluate, outOfScopeShellWrite, outOfScopeSpawnPath, pathIsInScope, protectedTarget, requestOverride } from "./gate.ts";
+
+const gateRoot = dirname(fileURLToPath(import.meta.url));
 import {
   contractIsComplete,
   describePromptState,
@@ -329,6 +333,12 @@ export default function terraloopMode(pi: ExtensionAPI) {
         recordSessionAudit(ctx, { event: "blocked", toolName: event.toolName, intent: "merge", phase: state.phase, reason: mergeDecision.reason });
         return { block: true, reason: mergeDecision.reason };
       }
+    }
+
+    const guarded = protectedTarget(event.toolName, event.input, homedir(), gateRoot);
+    if (guarded) {
+      recordSessionAudit(ctx, { event: "blocked", toolName: event.toolName, phase: state.phase, detail: "write to terraloop enforcement file" });
+      return { block: true, reason: `terraloop protects its own enforcement files: ${guarded} cannot be changed by the agent in any phase, and an override does not lift this. Ask the user to make this change by hand.` };
     }
 
     const intent = classifyTool(event.toolName, event.input);
