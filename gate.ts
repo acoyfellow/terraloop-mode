@@ -220,3 +220,25 @@ export function credentialAccess(input: unknown, home: string): string | null {
   if (typeof record.command !== "string") return null;
   return pathTokens(record.command, home).find(isCredentialPath) ?? null;
 }
+
+const interpreterOneLiner = new RegExp("(^|[\\s;&|(])(node|bun|deno|python3?|perl|ruby|php)\\s+(-e|-c|-E|--eval|-r)\\b");
+const interpreterWriteCall = new RegExp("writeFile|appendFile|createWriteStream|rmSync|unlink|rename|mkdirSync|open\\([^)]*['\"][wa]|shutil|os\\.remove|os\\.rename|>\\s*\\S");
+const pipedToShell = new RegExp("\\|\\s*(sudo\\s+)?(sh|bash|zsh|dash|ksh|python3?|node|perl)\\b(\\s|$)");
+const evalCall = new RegExp("(^|[\\s;&|(])(eval|source|\\.)\\s");
+const decodeCall = new RegExp("base64\\s+(-d|--decode|-D)|xxd\\s+-r|openssl\\s+(enc|base64)\\s.*-d");
+const variableWriteTarget = new RegExp("(^|[\\s;&|(])(rm|mv|cp|tee|truncate|chmod|chown|ln|install|mkdir|touch|rsync|dd)\\b[^;&|\\n]*\\$\\{?[A-Za-z_]|>>?\\s*\\$\\{?[A-Za-z_]");
+
+export function opaqueShellWrite(input: unknown, scope: readonly string[], home: string): string | null {
+  const command = (input as { command?: unknown } | null)?.command;
+  if (typeof command !== "string") return null;
+  if (pipedToShell.test(command)) return "a command piped into a shell or interpreter";
+  if (evalCall.test(command)) return "eval or source of a built command";
+  if (decodeCall.test(command) && new RegExp("\\|").test(command)) return "a decoded payload";
+  if (variableWriteTarget.test(command)) return "a write whose target is a shell variable";
+  if (interpreterOneLiner.test(command) && interpreterWriteCall.test(command)) {
+    const outside = pathTokens(command, home).find((path) => !pathIsInScope(path, scope));
+    if (outside) return outside;
+    if (pathTokens(command, home).length === 0) return "an interpreter write with no visible path";
+  }
+  return null;
+}

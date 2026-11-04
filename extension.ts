@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 import { Type } from "typebox";
 import { StringEnum } from "@earendil-works/pi-ai";
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
-import { classifyTool, consumeOverride, credentialAccess, evaluate, outOfScopeShellWrite, outOfScopeSpawnPath, pathIsInScope, protectedTarget, requestOverride } from "./gate.ts";
+import { classifyTool, consumeOverride, credentialAccess, evaluate, opaqueShellWrite, outOfScopeShellWrite, outOfScopeSpawnPath, pathIsInScope, protectedTarget, requestOverride } from "./gate.ts";
 
 const gateRoot = dirname(fileURLToPath(import.meta.url));
 import {
@@ -339,6 +339,12 @@ export default function terraloopMode(pi: ExtensionAPI) {
     if (secret) {
       recordSessionAudit(ctx, { event: "blocked", toolName: event.toolName, phase: state.phase, detail: "credential access" });
       return { block: true, reason: `terraloop does not let the agent read or change credential files (${secret}). Tools that need a credential must get it injected, not read it. An override does not lift this.` };
+    }
+
+    const opaque = event.toolName === "bash" ? opaqueShellWrite(event.input, state.contract?.scope ?? [], homedir()) : null;
+    if (opaque) {
+      recordSessionAudit(ctx, { event: "blocked", toolName: event.toolName, phase: state.phase, detail: "opaque shell write" });
+      return { block: true, reason: `terraloop cannot see where this command writes (${opaque}). Write the target path out in the command, or run it in a Terrarium box.` };
     }
 
     const guarded = protectedTarget(event.toolName, event.input, homedir(), gateRoot);
