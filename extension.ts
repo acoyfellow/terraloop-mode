@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 import { Type } from "typebox";
 import { StringEnum } from "@earendil-works/pi-ai";
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
-import { classifyTool, consumeOverride, credentialAccess, evaluate, opaqueShellWrite, outOfScopeShellWrite, outOfScopeSpawnPath, pathIsInScope, protectedTarget, requestOverride } from "./gate.ts";
+import { classifyTool, consumeOverride, credentialAccess, evaluate, opaqueShellWrite, persistenceTarget, outOfScopeShellWrite, outOfScopeSpawnPath, pathIsInScope, protectedTarget, requestOverride } from "./gate.ts";
 
 const gateRoot = dirname(fileURLToPath(import.meta.url));
 import {
@@ -345,6 +345,12 @@ export default function terraloopMode(pi: ExtensionAPI) {
     if (opaque) {
       recordSessionAudit(ctx, { event: "blocked", toolName: event.toolName, phase: state.phase, detail: "opaque shell write" });
       return { block: true, reason: `terraloop cannot see where this command writes (${opaque}). Write the target path out in the command, or run it in a Terrarium box.` };
+    }
+
+    const persistent = persistenceTarget(event.toolName, event.input, homedir());
+    if (persistent) {
+      recordSessionAudit(ctx, { event: "blocked", toolName: event.toolName, phase: state.phase, detail: "persistence" });
+      return { block: true, reason: `terraloop does not let the agent set up work that runs outside the session (${persistent}). Ask the user to do this by hand.` };
     }
 
     const guarded = protectedTarget(event.toolName, event.input, homedir(), gateRoot);

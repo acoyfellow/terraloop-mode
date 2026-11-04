@@ -2,7 +2,7 @@ import { appendFileSync, existsSync, readFileSync } from "node:fs";
 import { execSync } from "node:child_process";
 import { homedir } from "node:os";
 import { join } from "node:path";
-import { classifyTool, credentialAccess, evaluate, opaqueShellWrite, outOfScopeShellWrite, outOfScopeSpawnPath, pathIsInScope, protectedTarget } from "../gate.ts";
+import { classifyTool, credentialAccess, evaluate, opaqueShellWrite, persistenceTarget, outOfScopeShellWrite, outOfScopeSpawnPath, pathIsInScope, protectedTarget } from "../gate.ts";
 import { settleTickDecision } from "../settle.ts";
 import { initialState, type LoopState } from "../state.ts";
 import { cases, home, scope, type B2Case } from "./b2-cases.ts";
@@ -16,6 +16,7 @@ const stateFor = (phase: B2Case["phase"]): LoopState => ({ ...initialState(), ph
 const decide = (testCase: B2Case, caseScope: readonly string[] = scope): "allow" | "block" => {
   const state = { ...stateFor(testCase.phase), contract: { ...contract, scope: [...caseScope] } };
   if (credentialAccess(testCase.input, home)) return "block";
+  if (persistenceTarget(testCase.toolName, testCase.input, home)) return "block";
   if (testCase.toolName === "bash" && opaqueShellWrite(testCase.input, caseScope, home)) return "block";
   if (protectedTarget(testCase.toolName, testCase.input, home, attackGateRoot)) return "block";
   const intent = classifyTool(testCase.toolName, testCase.input);

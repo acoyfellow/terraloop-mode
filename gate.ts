@@ -242,3 +242,25 @@ export function opaqueShellWrite(input: unknown, scope: readonly string[], home:
   }
   return null;
 }
+
+const schedulerWrite = new RegExp("(^|[\\s;&|(])(crontab\\s+(?!-l\\b)\\S|launchctl\\s+(load|bootstrap|submit|enable)\\b|systemctl\\s+(--user\\s+)?(enable|start|link)\\b|at\\s+(now|\\d)|atq\\b|batch\\b)");
+const hooksPathConfig = new RegExp("git\\s+config\\b[^;&|\\n]*core\\.hooksPath");
+const shellStartupFile = new RegExp("/\\.(zshrc|zprofile|zshenv|bashrc|bash_profile|profile|login)$");
+
+function isPersistencePath(path: string): boolean {
+  if (path.includes("/Library/LaunchAgents/") || path.includes("/Library/LaunchDaemons/")) return true;
+  if (path.includes("/.git/hooks/")) return true;
+  if (path.includes("/.config/systemd/") || path.includes("/.config/autostart/")) return true;
+  return shellStartupFile.test(path);
+}
+
+export function persistenceTarget(toolName: string, input: unknown, home: string): string | null {
+  const record = (input ?? {}) as { command?: unknown; path?: unknown };
+  if (toolName !== "bash") {
+    return typeof record.path === "string" && isPersistencePath(expandHome(record.path, home)) ? record.path : null;
+  }
+  if (typeof record.command !== "string") return null;
+  if (schedulerWrite.test(record.command)) return "a scheduler that runs work outside the session";
+  if (hooksPathConfig.test(record.command)) return "git core.hooksPath";
+  return shellWriteTargets(record.command, home).find(isPersistencePath) ?? null;
+}
