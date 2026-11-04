@@ -5,18 +5,21 @@ usage() {
   cat >&2 <<'EOF'
 usage: gate.sh [--jql JQL] [--parked FILE] [--stale-days N] [--repo PATH]
 
-Reads the user's open Jira tickets, finds each ticket's GitLab MRs by key,
-and prints one line per ticket:
+Reads the user's open Jira tickets, finds each ticket's GitLab MRs and
+GitHub PRs by key, and prints one line per ticket:
 
   STATE<TAB>KEY<TAB>JIRA_STATUS<TAB>MRS<TAB>NEXT<TAB>SUMMARY
 
 States that need work make the gate exit 1. HUMAN, PARKED, WAIT and ok do not.
+asked.txt lines are KEY  # reason. A reason that starts with DECIDED makes the
+row a DECIDED work row. Any other reason makes it HUMAN.
 EOF
   exit 2
 }
 
 jql='assignee = currentUser() AND statusCategory != Done ORDER BY updated DESC'
 parked_file="${TICKETS_PARKED_FILE:-$HOME/cloudflare/.context/tickets/parked.txt}"
+asked_file="${TICKETS_ASKED_FILE:-$HOME/cloudflare/.context/tickets/asked.txt}"
 stale_days=30
 repo="${TICKETS_RELEASE_REPO:-$HOME/cloudflare/cloudflare-agent}"
 release_branch="${TICKETS_RELEASE_BRANCH:-main}"
@@ -31,7 +34,7 @@ while [ "$#" -gt 0 ]; do
   esac
 done
 
-for bin in cfi glab jq git; do
+for bin in cfi glab gh jq git; do
   command -v "$bin" >/dev/null || { echo "FAIL $bin is not installed"; exit 1; }
 done
 
@@ -47,13 +50,26 @@ me=$(glab api user 2>/dev/null | jq -r '.username // empty')
 git -C "$repo" fetch -q origin "$release_branch" 2>/dev/null
 now=$(date -u +%s)
 
-is_parked() { [ -s "$parked_file" ] && grep -qxF "$1" <(sed 's/[[:space:]#].*//' "$parked_file"); }
+listed_in() { [ -s "$2" ] && grep -qxF "$1" <(sed 's/[[:space:]#].*//' "$2"); }
+is_parked() { listed_in "$1" "$parked_file"; }
+asked_reason() { [ -s "$asked_file" ] && grep -E "^$1([[:space:]]|$)" "$asked_file" | head -1 | sed 's/^[^#]*#[[:space:]]*//'; }
 
 mr_lines() {
   glab api "merge_requests?scope=all&author_username=$me&search=$1&in=title,description&per_page=50" 2>/dev/null \
     | jq -r --arg k "$1" '.[] | select((.title + " " + .source_branch + " " + (.description // "")) | test($k + "([^0-9]|$)"))
         | [.project_id, .iid, .state, .draft, (.has_conflicts // false), (.detailed_merge_status // "-"),
            (.merge_commit_sha // .squash_commit_sha // "-"), .references.full] | @tsv'
+}
+
+github_pr_lines() {
+  gh api graphql -f query="{search(query:\"author:@me is:pr $1 in:title,body\",type:ISSUE,first:20){nodes{... on PullRequest{number state isDraft mergeable url title body headRefName commits(last:1){nodes{commit{statusCheckRollup{state}}}} reviewThreads(first:100){nodes{isResolved}}}}}}" 2>/dev/null \
+    | jq -r --arg k "$1" '.data.search.nodes[]? | select((.title + " " + .headRefName + " " + (.body // "")) | test($k + "([^0-9]|$)"))
+        | [.number,
+           ({"OPEN":"opened","MERGED":"merged","CLOSED":"closed"}[.state] // "closed"),
+           .isDraft, (.mergeable == "CONFLICTING"),
+           ([.reviewThreads.nodes[]? | select(.isResolved == false)] | length),
+           (.commits.nodes[0].commit.statusCheckRollup.state // "NONE"),
+           (.url | sub("^https://github.com/"; "github:"))] | @tsv'
 }
 
 open_threads() {
@@ -100,6 +116,22 @@ while IFS=$'\t' read -r key status updated summary; do
         ;;
     esac
   done < <(mr_lines "$key")
+  while IFS=$'\t' read -r number state draft conflicts threads checks ref; do
+    [ -n "$number" ] || continue
+    refs+=("$ref:$state")
+    case "$state" in
+      merged) merged=$((merged + 1)); unreleased=$((unreleased + 1)) ;;
+      opened)
+        open=$((open + 1))
+        [ "$draft" = "true" ] && drafts=$((drafts + 1))
+        if [ "$conflicts" = "true" ] || [ "${threads:-0}" -gt 0 ] || [ "$checks" = "FAILURE" ] || [ "$checks" = "ERROR" ] || [ "$draft" = "true" ]; then
+          broken=$((broken + 1))
+        else
+          green_waiting=$((green_waiting + 1))
+        fi
+        ;;
+    esac
+  done < <(github_pr_lines "$key")
   mrs=$(IFS=,; echo "${refs[*]:-none}")
 
   state=ok; next="none"
@@ -133,7 +165,14 @@ while IFS=$'\t' read -r key status updated summary; do
       ;;
   esac
 
-  case "$state" in MOVE|MR_WORK|BUILD|TRIAGE|STALE) work=$((work + 1)) ;; esac
+  if listed_in "$key" "$asked_file"; then
+    reason=$(asked_reason "$key")
+    case "$reason" in
+      DECIDED*) state=DECIDED; next="act on the user's decision: $reason" ;;
+      *) state=HUMAN; next="asked user: $reason" ;;
+    esac
+  fi
+  case "$state" in MOVE|MR_WORK|BUILD|TRIAGE|STALE|DECIDED) work=$((work + 1)) ;; esac
   printf '%s\t%s\t%s\t%s\t%s\t%s\n' "$state" "$key" "$status" "$mrs" "$next" "$summary"
 done < <(echo "$tickets" | jq -r '.results[] | [.metadata.key, (.metadata.status // "-"), (.updated_at // "-"), (.title | sub("^[A-Z]+-[0-9]+: "; "") | .[:90])] | @tsv')
 

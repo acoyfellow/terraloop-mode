@@ -22,9 +22,10 @@ nohup bash <skill-dir>/gate.sh > ~/cloudflare/.context/tickets/gate.out 2>&1 &
 ```
 
 - Source: `assignee = currentUser() AND statusCategory != Done` through `cfi --json jira query`.
-- MRs: the user's GitLab MRs whose title, branch or description name the key.
+- MRs: the user's GitLab MRs and GitHub PRs (`gh`, `author:@me`) whose title, branch or description name the key. A merged GitHub PR counts as not released, so its ticket waits in `WAIT` until the user confirms the release.
 - Released: the merge commit is an ancestor of `origin/main` in `~/cloudflare/cloudflare-agent`.
 - Parked: keys in `~/cloudflare/.context/tickets/parked.txt`, one per line. The user decides what goes there.
+- Asked: `~/cloudflare/.context/tickets/asked.txt`, one line per key: `KEY  # reason`. Any reason makes the row `HUMAN`, so the loop stops asking. A reason that starts with `DECIDED` makes it a `DECIDED` work row: the loop acts on the user's answer. Keep one line per key; the gate reads only the first.
 - Output: `STATE KEY STATUS MRS NEXT SUMMARY`, then `SUMMARY work=N`. Exit 0 only when `work=0`.
 
 ## The state machine
@@ -45,8 +46,10 @@ nohup bash <skill-dir>/gate.sh > ~/cloudflare/.context/tickets/gate.out 2>&1 &
 | Awaiting Release | not on `main` yet | `WAIT` | Nothing | - |
 | Blocked / unknown | - | `HUMAN` | Report it | yes |
 | parked | - | `PARKED` | Nothing | - |
+| asked, no answer | - | `HUMAN` | Nothing until the user answers | - |
+| asked, `DECIDED` | - | `DECIDED` | Do the decided step, then rewrite the line | no, already decided |
 
-Work states: `MOVE`, `MR_WORK`, `BUILD`, `TRIAGE`, `STALE`. Quiet states: `HUMAN`, `WAIT`, `PARKED`, `ok`.
+Work states: `MOVE`, `MR_WORK`, `BUILD`, `TRIAGE`, `STALE`, `DECIDED`. Quiet states: `HUMAN`, `WAIT`, `PARKED`, `ok`.
 
 ## MR_WORK rules
 
@@ -74,9 +77,24 @@ Work states: `MOVE`, `MR_WORK`, `BUILD`, `TRIAGE`, `STALE`. Quiet states: `HUMAN
 ## Contract
 
 1. `terraloop_control action=arm`. North star: "Keep the user's Jira board moving: every ticket in its next state, with proof."
-2. Show the contract: JQL, parked list, allowed actions, gate command. Scope: `~/cloudflare/.context/tickets`, each repo the MRs live in, and their worktrees. Wait for go.
-3. `terraloop_control action=lock` with the gate as proof and `merge: never`.
-4. Create one `loops_task` driver.
+2. Run the gate once. List every repo that its MRs and PRs live in, including GitHub repos. The scope is fixed at lock time; a repo left out cannot be changed later without `/terraloop-off` and a new lock.
+3. Show the contract: JQL, parked list, asked list, allowed actions, gate command, and scope: `~/cloudflare/.context/tickets`, every repo from step 2, and their worktrees. Wait for go.
+4. `terraloop_control action=lock` with the gate as proof and `merge: never`.
+5. Create one `loops_task` driver.
+
+### Known gate limits
+
+- Once the loop reaches its stop gate, the gate blocks `git push` and can block every shell command, even with override grants left (20 per loop). Push and run full suites while the loop is driving. If the loop is gated and a push is needed, ask the user for `/terraloop-off` and a new lock.
+- Hooks may block a command that names `gate.sh` with no time limit. Run it as `perl -e 'alarm 110; exec @ARGV' bash <skill-dir>/gate.sh` or under `nohup`.
+
+## Dry run
+
+Before the first lock, and after any change to `gate.sh`, run the gate twice with no writes:
+
+1. Run the gate twice, a few seconds apart, into two files.
+2. Both runs must exit with the same code, and the `STATE KEY` columns must match.
+3. Check by hand: each `HUMAN` row has a reason, each `DECIDED` row has an action, and no ticket shows `none` when it has a PR.
+4. Report the table to the user. Lock only after they say go.
 
 ## Driver tick
 
