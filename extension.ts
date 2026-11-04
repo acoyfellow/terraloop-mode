@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 import { Type } from "typebox";
 import { StringEnum } from "@earendil-works/pi-ai";
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
-import { classifyTool, consumeOverride, credentialAccess, evaluate, opaqueShellWrite, persistenceTarget, outOfScopeShellWrite, outOfScopeSpawnPath, pathIsInScope, protectedTarget, requestOverride } from "./gate.ts";
+import { classifyTool, codemodeOutOfScope, consumeOverride, credentialAccess, evaluate, opaqueShellWrite, persistenceTarget, outOfScopeShellWrite, outOfScopeSpawnPath, pathIsInScope, protectedTarget, requestOverride } from "./gate.ts";
 
 const gateRoot = dirname(fileURLToPath(import.meta.url));
 import {
@@ -367,6 +367,13 @@ export default function terraloopMode(pi: ExtensionAPI) {
       if (typeof path === "string" && pathIsInScope(path, state.contract.scope) === false) {
         recordSessionAudit(ctx, { event: "blocked", toolName: event.toolName, intent, phase: state.phase, detail: "path outside locked scope" });
         return { block: true, reason: `terraloop scope violation: ${path} is outside the locked scope (${state.contract.scope.join(", ")}).` };
+      }
+      if (event.toolName === "codemode") {
+        const nested = codemodeOutOfScope(event.input, state.contract.scope, homedir());
+        if (nested) {
+          recordSessionAudit(ctx, { event: "blocked", toolName: event.toolName, intent, phase: state.phase, detail: "codemode write outside locked scope" });
+          return { block: true, reason: `terraloop scope violation: this script writes ${nested}, which is outside the locked scope (${state.contract.scope.join(", ")}).` };
+        }
       }
       if (event.toolName === "bash") {
         const target = outOfScopeShellWrite(event.input, state.contract.scope, homedir());

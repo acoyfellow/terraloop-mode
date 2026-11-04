@@ -2,7 +2,7 @@ import { appendFileSync, existsSync, readFileSync } from "node:fs";
 import { execSync } from "node:child_process";
 import { homedir } from "node:os";
 import { join } from "node:path";
-import { classifyTool, credentialAccess, evaluate, opaqueShellWrite, persistenceTarget, outOfScopeShellWrite, outOfScopeSpawnPath, pathIsInScope, protectedTarget } from "../gate.ts";
+import { classifyTool, codemodeOutOfScope, credentialAccess, evaluate, opaqueShellWrite, persistenceTarget, outOfScopeShellWrite, outOfScopeSpawnPath, pathIsInScope, protectedTarget } from "../gate.ts";
 import { settleTickDecision } from "../settle.ts";
 import { initialState, type LoopState } from "../state.ts";
 import { cases, home, scope, type B2Case } from "./b2-cases.ts";
@@ -25,6 +25,7 @@ const decide = (testCase: B2Case, caseScope: readonly string[] = scope): "allow"
     const path = testCase.input.path;
     if (typeof path === "string" && !pathIsInScope(path, caseScope)) return "block";
     if (testCase.toolName === "bash" && outOfScopeShellWrite(testCase.input, caseScope, home)) return "block";
+    if (testCase.toolName === "codemode" && codemodeOutOfScope(testCase.input, caseScope, home)) return "block";
   }
   if (intent === "spawn" && (state.phase === "driving" || state.phase === "gated") && outOfScopeSpawnPath(testCase.input, caseScope)) return "block";
   return evaluate(state, intent).allowed ? "allow" : "block";

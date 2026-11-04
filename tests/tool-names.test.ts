@@ -9,9 +9,9 @@ test("the gate recognizes the live terrarium spawn tool names", () => {
   }
 });
 
-test("an unrecognized spawn-shaped name is not silently treated as spawn", () => {
-  expect(classifyTool("terrarium_spawn", {})).toBe("read");
-  expect(classifyTool("spawn", {})).toBe("read");
+test("an unrecognized spawn-shaped name is not treated as spawn, and is not a free read either", () => {
+  expect(classifyTool("terrarium_spawn", {})).toBe("mutate");
+  expect(classifyTool("spawn", {})).toBe("mutate");
 });
 
 test("the driver tool is recognized by action", () => {

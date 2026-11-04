@@ -32,7 +32,14 @@ export function classifyTool(toolName: string, input: unknown): ToolIntent {
     const command = (input as { command?: unknown } | null)?.command;
     return typeof command === "string" && mutatingShell.test(command) ? "mutate" : "read";
   }
-  return "read";
+  return isKnownReadTool(toolName) ? "read" : "mutate";
+}
+
+const readTools = new Set(["read", "grep", "find", "ls", "glob", "browser", "browser_inspect", "gitlab_mr_get", "gitlab_mr_comments", "gitlab_open_mrs", "jira_search", "jira_get_issue", "mcp", "pantry"]);
+const readToolSuffix = new RegExp("(_status|_read|_get|_list|_search|_describe|_check_in|_comments|_reports|_open_mrs|_get_issue)$");
+
+function isKnownReadTool(toolName: string): boolean {
+  return readTools.has(toolName) || readToolSuffix.test(toolName);
 }
 
 export function pathIsInScope(path: string, scope: readonly string[]): boolean {
@@ -93,7 +100,15 @@ export function spawnTargetPaths(input: unknown): string[] {
   return paths;
 }
 
+function spawnJobsWithoutCwd(input: unknown): number {
+  if (!input || typeof input !== "object") return 0;
+  const record = input as { cwd?: unknown; jobs?: unknown };
+  if (Array.isArray(record.jobs)) return record.jobs.filter((job) => !job || typeof job !== "object" || typeof (job as { cwd?: unknown }).cwd !== "string").length;
+  return typeof record.cwd === "string" && record.cwd.length > 0 ? 0 : 1;
+}
+
 export function outOfScopeSpawnPath(input: unknown, scope: readonly string[]): string | null {
+  if (spawnJobsWithoutCwd(input) > 0) return "a spawn with no cwd";
   for (const path of spawnTargetPaths(input)) {
     if (!pathIsInScope(path, scope)) return path;
   }
@@ -263,4 +278,22 @@ export function persistenceTarget(toolName: string, input: unknown, home: string
   if (schedulerWrite.test(record.command)) return "a scheduler that runs work outside the session";
   if (hooksPathConfig.test(record.command)) return "git core.hooksPath";
   return shellWriteTargets(record.command, home).find(isPersistencePath) ?? null;
+}
+
+const codemodeWriteCall = new RegExp("tools\\.(write|edit|hashline)\\(\\s*\\{[^}]*path\\s*:\\s*['\"`]([^'\"`]+)", "g");
+const codemodeBashCall = new RegExp("tools\\.bash\\(\\s*\\{[^}]*command\\s*:\\s*(['\"`])((?:(?!\\1).)*)\\1", "g");
+
+export function codemodeOutOfScope(input: unknown, scope: readonly string[], home: string): string | null {
+  const code = (input as { code?: unknown } | null)?.code;
+  if (typeof code !== "string") return null;
+  for (const match of code.matchAll(codemodeWriteCall)) {
+    const path = expandHome(match[2] ?? "", home);
+    if (!pathIsInScope(path, scope)) return path;
+  }
+  for (const match of code.matchAll(codemodeBashCall)) {
+    const nested = { command: match[2] ?? "" };
+    const target = outOfScopeShellWrite(nested, scope, home) ?? opaqueShellWrite(nested, scope, home) ?? credentialAccess(nested, home);
+    if (target) return target;
+  }
+  return null;
 }
