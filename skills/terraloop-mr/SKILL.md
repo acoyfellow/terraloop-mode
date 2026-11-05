@@ -5,7 +5,7 @@ description: Babysit one GitLab MR or GitHub PR to merge-ready in a terraloop. I
 
 # terraloop:mr
 
-One MR, one loop, one exit. The loop owns the MR until the forge says it can merge. It never merges.
+One MR, one loop, one exit. The loop owns the MR until the forge says it can merge. It merges only after Jordan says yes.
 
 ## Input
 
@@ -24,8 +24,8 @@ One MR, one loop, one exit. The loop owns the MR until the forge says it can mer
   4. The forge's own merge verdict says mergeable. GitLab: `detailed_merge_status == "mergeable"`. GitHub: `mergeStateStatus == CLEAN`.
   5. The review bot (gsa_claude, or the repo's bot) has reviewed this head SHA and left no open finding.
 - **scope:** the MR's worktree only.
-- **merge:** never.
-- **proof:** a single command with no `;` that prints the 5 gate facts for the head SHA.
+- **merge:** `gate` in `terraloop_control action=lock`. A merge is allowed only after the gate passes and Jordan says yes.
+- **proof:** `sh <session-notes>/gate-<iid>.sh`. Write this script before you lock. The gate tool runs the proof as one command and rejects pipes, `;` and `glab api --jq` (glab has no `--jq` flag). The script reads the MR with `glab api`, filters with `jq`, prints the 5 gate facts, and exits non-zero if any fact fails. Run it once by hand before you lock.
 - **driver:** `loops_task` every 10m while threads or CI are moving. Delete it at the gate.
 
 ## Every thread ends one of two ways
@@ -71,11 +71,13 @@ After every push, re-read the MR from the forge. Never trust that a push went gr
 
 ## Exit
 
-When all 5 gate facts are true, run `terraloop_control action=gate`. Then send one my-ax message (session `b0b4882e-aa3c-4a32-ad56-626c7e6bdb67`, method `inject`, role `assistant`):
+Order matters. After `action=gate`, the extension blocks every further tool call that changes something, including the my-ax message. So send the message first:
 
-> `<MR link>` is merge-ready at `<sha>`: 0 threads, pipeline green, mergeable. Can I merge?
-
-Then stop and wait. Merge only after Jordan says yes in that thread, and only that MR.
+1. Run the proof script and see it exit 0.
+2. Send one my-ax message with `my-ax_my_ax_code` and `codemode.inject({ sessionId: "b0b4882e-aa3c-4a32-ad56-626c7e6bdb67", content })`:
+   > `<MR link>` is merge-ready at `<sha>`: 0 threads, pipeline green, mergeable. Can I merge?
+3. Run `terraloop_control action=gate`, then `loops_task action=delete`.
+4. Stop and wait. Merge only after Jordan says yes, and only that MR. The merge and any cleanup after the gate need `terraloop_control action=override` with a reason.
 
 ## Human waits
 
@@ -90,6 +92,10 @@ These are waits, not blockers to fix. Report each once on my-ax, then keep worki
 - Use `--no-verify`. Commit with plain `git commit` (global hooks in `~/.git-hooks` must run; never override core.hooksPath).
 - Add source comments, `as` or `!`.
 - Retry the same failing pipeline more than once.
+
+## Settle ticks
+
+While driving, every turn that makes a tool call triggers an instant settle tick, budgeted at 100 per loop. Right after a push, the pipeline and the bot need minutes. On a settle tick that comes before anything can have changed, make no tool calls and say so in one line. The 10m heartbeat does the next real read.
 
 ## Report
 
