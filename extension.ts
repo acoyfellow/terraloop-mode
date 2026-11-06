@@ -22,7 +22,7 @@ import {
 } from "./state.ts";
 import { proofProblem, verifyProof } from "./proof.ts";
 import { describeScreen, screenEvidence, type ClassifierLike } from "./evidence-screen.ts";
-import { settleTickDecision, settleTickMessage } from "./settle.ts";
+import { callMakesProgress, settleTickDecision, settleTickMessage } from "./settle.ts";
 import { evaluateMerge, findMergeAction, parseMergeMode } from "./merge-guard.ts";
 
 const controlParameters = Type.Object({
@@ -88,6 +88,7 @@ const terraloopPromptSection = "terraloop";
 
 export default function terraloopMode(pi: ExtensionAPI) {
   let toolCallsThisRun = 0;
+  let progressCallsThisRun = 0;
 
   pi.registerTool({
     name: "terraloop_control",
@@ -293,6 +294,7 @@ export default function terraloopMode(pi: ExtensionAPI) {
 
   pi.on("agent_start", () => {
     toolCallsThisRun = 0;
+    progressCallsThisRun = 0;
   });
 
   pi.on("agent_settled", (_event, ctx) => {
@@ -300,6 +302,7 @@ export default function terraloopMode(pi: ExtensionAPI) {
     if (state.phase === "off") return;
     const decision = settleTickDecision(state, {
       toolCallsThisRun,
+      progressCallsThisRun,
       idle: ctx.isIdle(),
       pendingMessages: ctx.hasPendingMessages(),
     });
@@ -322,6 +325,7 @@ export default function terraloopMode(pi: ExtensionAPI) {
 
   pi.on("tool_call", (event, ctx) => {
     toolCallsThisRun += 1;
+    if (callMakesProgress(event.toolName, event.input)) progressCallsThisRun += 1;
     const state = readSessionState(ctx);
     if (state.phase === "off") return undefined;
 

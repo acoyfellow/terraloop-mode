@@ -1,9 +1,11 @@
+import { classifyTool } from "./gate.ts";
 import { contractIsComplete, type LoopState } from "./state.ts";
 
 export const settleTickBudget = 100;
 
 export type SettleObservation = {
   toolCallsThisRun: number;
+  progressCallsThisRun?: number;
   idle: boolean;
   pendingMessages: boolean;
 };
@@ -20,6 +22,7 @@ export function settleTickDecision(state: LoopState, observed: SettleObservation
   if (!observed.idle) return { deliver: false, reason: "agent is not idle" };
   if (observed.pendingMessages) return { deliver: false, reason: "a follow-up is already queued" };
   if (observed.toolCallsThisRun === 0) return { deliver: false, reason: "settled run made no tool calls; heartbeat owns the next tick" };
+  if (observed.progressCallsThisRun === 0) return { deliver: false, reason: "settled run only read or polled; heartbeat owns the next tick" };
   if (state.settleTicks >= budget) return { deliver: false, reason: `settle tick budget exhausted (${state.settleTicks}/${budget})` };
   const tick = state.settleTicks + 1;
   return { deliver: true, tick, state: { ...state, settleTicks: tick } };
@@ -33,4 +36,9 @@ export function settleTickMessage(state: LoopState, tick: number): string {
     "",
     state.driverPrompt ?? "",
   ].join("\n");
+}
+
+export function callMakesProgress(toolName: string, input: unknown): boolean {
+  const intent = classifyTool(toolName, input);
+  return intent === "mutate" || intent === "spawn" || intent === "driver-create" || intent === "driver-delete";
 }

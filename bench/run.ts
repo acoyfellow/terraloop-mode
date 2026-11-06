@@ -51,7 +51,7 @@ const runB3 = () => {
   const state: LoopState = { ...initialState(), phase: "driving", contract, driverLoopId: "drv", driverPrompt: "tick" };
   const tally = scenario.reduce(
     (acc, turn) => {
-      const decision = settleTickDecision(acc.state, { toolCallsThisRun: turn.toolCalls, idle: true, pendingMessages: false });
+      const decision = settleTickDecision(acc.state, { toolCallsThisRun: turn.toolCalls, progressCallsThisRun: turn.progressCalls, idle: true, pendingMessages: false });
       const delivered = decision.deliver;
       const wanted = turn.newEvidence || turn.childCallback;
       return {

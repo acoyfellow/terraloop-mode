@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { settleTickBudget, settleTickDecision, settleTickMessage } from "../settle.ts";
+import { callMakesProgress, settleTickBudget, settleTickDecision, settleTickMessage } from "../settle.ts";
 import { initialState, type LoopState } from "../state.ts";
 
 const contract = { goal: "g", gate: "b", scope: ["/repo"], proof: "bun test" };
@@ -53,4 +53,24 @@ test("the delivered message carries the driver prompt and the tick number", () =
   expect(message).toContain("settle tick 4");
   expect(message).toContain("loop1");
   expect(message).toContain("Do the next step.");
+});
+
+test("a settled run that only read or polled hands the next tick back to the heartbeat", () => {
+  const decision = settleTickDecision(driving(), { ...productive, progressCallsThisRun: 0 });
+  expect(decision.deliver).toBe(false);
+  if (!decision.deliver) expect(decision.reason).toContain("only read or polled");
+});
+
+test("a settled run with at least one progress call still delivers", () => {
+  expect(settleTickDecision(driving(), { ...productive, progressCallsThisRun: 1 }).deliver).toBe(true);
+});
+
+test("reads and polls are not progress; writes, spawns and driver changes are", () => {
+  expect(callMakesProgress("read", { path: "/repo/a.ts" })).toBe(false);
+  expect(callMakesProgress("bash", { command: "tail -5 run.log" })).toBe(false);
+  expect(callMakesProgress("bash", { command: "git status --short" })).toBe(false);
+  expect(callMakesProgress("edit", { path: "/repo/a.ts" })).toBe(true);
+  expect(callMakesProgress("bash", { command: "echo row >> log.md" })).toBe(true);
+  expect(callMakesProgress("loops_task", { action: "delete", id: "x" })).toBe(true);
+  expect(callMakesProgress("loops_task", { action: "list" })).toBe(false);
 });

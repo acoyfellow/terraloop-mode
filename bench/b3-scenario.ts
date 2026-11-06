@@ -1,11 +1,18 @@
 export type B3Turn = {
   readonly id: string;
   readonly toolCalls: number;
+  readonly progressCalls: number;
   readonly newEvidence: boolean;
   readonly childCallback: boolean;
 };
 
-const turn = (id: string, toolCalls: number, newEvidence: boolean, childCallback = false): B3Turn => ({ id, toolCalls, newEvidence, childCallback });
+const turn = (id: string, toolCalls: number, newEvidence: boolean, childCallback = false): B3Turn => ({
+  id,
+  toolCalls,
+  progressCalls: newEvidence && !childCallback ? toolCalls : 0,
+  newEvidence,
+  childCallback,
+});
 
 export const scenario: readonly B3Turn[] = [
   turn("lock-and-start-job", 6, true),
