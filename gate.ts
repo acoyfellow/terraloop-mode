@@ -258,7 +258,46 @@ export function opaqueShellWrite(input: unknown, scope: readonly string[], home:
   return null;
 }
 
-const schedulerWrite = new RegExp("(^|[\\s;&|(])(crontab\\s+(?!-l\\b)\\S|launchctl\\s+(load|bootstrap|submit|enable)\\b|systemctl\\s+(--user\\s+)?(enable|start|link)\\b|at\\s+(now|\\d)|atq\\b|batch\\b)");
+const schedulerCommand = new RegExp("^(?:sudo\\s+)?(crontab\\s+(?!-l\\b)\\S|launchctl\\s+(load|bootstrap|submit|enable)\\b|systemctl\\s+(--user\\s+)?(enable|start|link)\\b|at\\s+(now|\\d)|atq\\b|batch\\b)");
+
+export function blankQuotedText(command: string): string {
+  let out = "";
+  let quote: string | null = null;
+  for (let index = 0; index < command.length; index++) {
+    const char = command[index];
+    if (quote) {
+      if (char === "\\" && quote === '"' && index + 1 < command.length) {
+        out += "  ";
+        index++;
+      } else if (char === quote) {
+        quote = null;
+        out += char;
+      } else {
+        out += char === "\n" ? "\n" : " ";
+      }
+    } else if (char === "'" || char === '"' || char === "`") {
+      quote = char;
+      out += char;
+    } else {
+      out += char;
+    }
+  }
+  return out;
+}
+
+const nestedShellScript = new RegExp("(?:^|[\\s;&|(])(?:sudo\\s+)?(?:ba|z|da|k)?sh\\s+(?:-\\w+\\s+)*-\\w*c\\s+(['\"])((?:(?!\\1).)*)\\1", "g");
+
+export function runsScheduler(command: string, depth = 0): boolean {
+  if (depth < 3) {
+    for (const match of command.matchAll(nestedShellScript)) {
+      if (runsScheduler(match[2] ?? "", depth + 1)) return true;
+    }
+  }
+  return blankQuotedText(command)
+    .split(/&&|\|\||[;|\n&(){}]/)
+    .map((segment) => segment.trim())
+    .some((segment) => schedulerCommand.test(segment));
+}
 const hooksPathConfig = new RegExp("git\\s+config\\b[^;&|\\n]*core\\.hooksPath");
 const shellStartupFile = new RegExp("/\\.(zshrc|zprofile|zshenv|bashrc|bash_profile|profile|login)$");
 
@@ -275,7 +314,7 @@ export function persistenceTarget(toolName: string, input: unknown, home: string
     return typeof record.path === "string" && isPersistencePath(expandHome(record.path, home)) ? record.path : null;
   }
   if (typeof record.command !== "string") return null;
-  if (schedulerWrite.test(record.command)) return "a scheduler that runs work outside the session";
+  if (runsScheduler(record.command)) return "a scheduler that runs work outside the session";
   if (hooksPathConfig.test(record.command)) return "git core.hooksPath";
   return shellWriteTargets(record.command, home).find(isPersistencePath) ?? null;
 }
