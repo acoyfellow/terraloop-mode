@@ -26,7 +26,7 @@ import { callMakesProgress, settleTickDecision, settleTickMessage } from "./sett
 import { evaluateMerge, findMergeAction, parseMergeMode } from "./merge-guard.ts";
 
 const controlParameters = Type.Object({
-  action: StringEnum(["arm", "lock", "override", "status", "gate"] as const),
+  action: StringEnum(["arm", "lock", "override", "status", "gate", "wait"] as const),
   northStar: Type.Optional(Type.String({ description: "What the loop is for, in one line. Required for arm." })),
   goal: Type.Optional(Type.String({ description: "Falsifiable end state. Required for lock." })),
   gate: Type.Optional(Type.String({ description: "Binary stop condition. Required for lock." })),
@@ -34,10 +34,13 @@ const controlParameters = Type.Object({
   proof: Type.Optional(Type.String({ description: "Exact command or receipt that proves each step. Required for lock." })),
   reason: Type.Optional(Type.String({ description: "Why an inline action is required. Required for override." })),
   calls: Type.Optional(Type.Number({ description: "How many inline mutations the override covers. Default 1." })),
+  question: Type.Optional(Type.String({ description: "For wait: the one question the loop is blocked on. Settle ticks stop until the user replies." })),
   merge: Type.Optional(StringEnum(["never", "gate"] as const, { description: "For lock. never (default, full stop): merges are blocked for the whole loop. gate: merges are allowed only after action=gate verifies the proof." })),
 });
 
 const LOOPS_STOP_EVENT = "loops:stop";
+const LOOPS_PAUSE_EVENT = "loops:pause";
+const LOOPS_RESUME_EVENT = "loops:resume";
 
 export function createdLoopId(serializedResult: string): string | null {
   return (
@@ -100,6 +103,7 @@ export default function terraloopMode(pi: ExtensionAPI) {
       "Call terraloop_control action=arm with a northStar when the user asks for a terraloop, a driver loop, or a long autonomous run that should stop at a stated condition.",
       "Call terraloop_control action=lock with goal, gate, scope, and proof after the user approves the contract, before spawning any terrarium child.",
       "Call terraloop_control action=override with a reason when terraloop blocks an inline action that is genuinely required.",
+      "Call terraloop_control action=wait with the question when the loop cannot move without the user. Ask once, then stop; settle ticks pause until the user replies.",
       "Do not try to leave terraloop mode or clear its state; only the user can, with /terraloop-off.",
     ],
     parameters: controlParameters,
@@ -137,6 +141,15 @@ export default function terraloopMode(pi: ExtensionAPI) {
         const next = writeSessionState(ctx, { ...state, contract, gateReceipt: null });
         recordSessionAudit(ctx, { event: "lock", contract });
         return text(`${describeState(next)}\n\nContract locked. Create the driver loop with loops_task action=create, then spawn children.`);
+      }
+
+      if (params.action === "wait") {
+        const question = (params.question ?? "").trim();
+        if (question.length < 8) return text("wait rejected: question is required and must say what you need from the user.");
+        const next = writeSessionState(ctx, { ...state, waitingOn: question });
+        if (state.driverLoopId) pi.events.emit(LOOPS_PAUSE_EVENT, { id: state.driverLoopId });
+        recordSessionAudit(ctx, { event: "wait", question });
+        return text(`${describeState(next)}\n\nWaiting on the user. Settle ticks and the driver heartbeat are paused until they reply. Ask the question once, then stop.`);
       }
 
       if (params.action === "override") {
@@ -223,6 +236,17 @@ export default function terraloopMode(pi: ExtensionAPI) {
       const stopped = loopsToStop.size ? `; stopped loops ${[...loopsToStop].join(", ")}` : "";
       ctx.ui.notify(`terraloop off in this session (was ${previous.phase})${stopped}`, "info");
     },
+  });
+
+  pi.on("input", (event, ctx) => {
+    if (event.source === "extension") return { action: "continue" };
+    const state = readSessionState(ctx);
+    if (state.waitingOn) {
+      writeSessionState(ctx, { ...state, waitingOn: null });
+      if (state.driverLoopId) pi.events.emit(LOOPS_RESUME_EVENT, { id: state.driverLoopId });
+      recordSessionAudit(ctx, { event: "wait-answered", question: state.waitingOn });
+    }
+    return { action: "continue" };
   });
 
   pi.on("before_agent_start", (event, ctx) => {

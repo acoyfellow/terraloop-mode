@@ -74,3 +74,9 @@ test("reads and polls are not progress; writes, spawns and driver changes are", 
   expect(callMakesProgress("loops_task", { action: "delete", id: "x" })).toBe(true);
   expect(callMakesProgress("loops_task", { action: "list" })).toBe(false);
 });
+
+test("no tick fires while the loop is waiting on the user", () => {
+  const decision = settleTickDecision(driving({ waitingOn: "Pick option 1, 2 or 3" }), productive);
+  expect(decision.deliver).toBe(false);
+  if (!decision.deliver) expect(decision.reason).toContain("waiting on the user");
+});

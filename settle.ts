@@ -19,6 +19,7 @@ export function settleTickDecision(state: LoopState, observed: SettleObservation
   if (!contractIsComplete(state.contract)) return { deliver: false, reason: "contract is incomplete" };
   if (state.driverLoopId === null) return { deliver: false, reason: "no driver loop is recorded" };
   if (!state.driverPrompt) return { deliver: false, reason: "no driver prompt was captured" };
+  if (state.waitingOn) return { deliver: false, reason: `waiting on the user: ${state.waitingOn}` };
   if (!observed.idle) return { deliver: false, reason: "agent is not idle" };
   if (observed.pendingMessages) return { deliver: false, reason: "a follow-up is already queued" };
   if (observed.toolCallsThisRun === 0) return { deliver: false, reason: "settled run made no tool calls; heartbeat owns the next tick" };

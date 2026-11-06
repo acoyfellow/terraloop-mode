@@ -107,6 +107,19 @@ terraloop_control action=override reason="<12+ chars, why the exception is requi
 Grants are bounded, expire when consumed, and are recorded to
 `~/.terrarium/terraloop-audit.jsonl`.
 
+When the loop cannot move without the user, ask once and park it:
+
+```
+terraloop_control action=wait question="<what you need from the user>"
+```
+
+Settle ticks and the driver heartbeat pause until the user sends any message.
+Do not answer ticks with "still waiting".
+
+Settle ticks only follow a run that changed something (a write, a spawn, a
+driver change). A run that only read or polled hands the next tick back to the
+heartbeat, so match the heartbeat interval to how fast the evidence can change.
+
 ### 4. Reaching the gate
 
 Mark it, delete the driver, report:

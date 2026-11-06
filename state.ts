@@ -49,6 +49,7 @@ export type LoopState = {
   driverLoopId: string | null;
   driverPrompt: string | null;
   settleTicks: number;
+  waitingOn: string | null;
   spawnedRunIds: readonly string[];
   override: OverrideGrant | null;
   overrideGrantsUsed: number;
@@ -76,6 +77,7 @@ export function initialState(): LoopState {
     driverLoopId: null,
     driverPrompt: null,
     settleTicks: 0,
+    waitingOn: null,
     spawnedRunIds: [],
     override: null,
     overrideGrantsUsed: 0,
@@ -97,6 +99,7 @@ export function readState(path: string): LoopState {
       driverLoopId: parsed.driverLoopId ?? null,
       driverPrompt: parsed.driverPrompt ?? null,
       settleTicks: parsed.settleTicks ?? 0,
+      waitingOn: typeof parsed.waitingOn === "string" ? parsed.waitingOn : null,
       spawnedRunIds: parsed.spawnedRunIds ?? [],
       override: parsed.override ?? null,
       overrideGrantsUsed: parsed.overrideGrantsUsed ?? 0,
@@ -166,6 +169,7 @@ export function describeState(state: LoopState): string {
   if (state.contract) parts.push(`goal=${state.contract.goal}`, `gate=${state.contract.gate}`, `scope=${state.contract.scope.join(",")}`, `proof=${state.contract.proof}`);
   parts.push(`driver=${state.driverLoopId ?? "none"}`);
   if (state.settleTicks > 0) parts.push(`settleTicks=${state.settleTicks}`);
+  if (state.waitingOn) parts.push(`waitingOn=${state.waitingOn}`);
   if (state.spawnedRunIds.length > 0) parts.push(`children=${state.spawnedRunIds.length}`);
   parts.push(`delegated=${state.delegatedSpawns} inline=${state.inlineMutations}`);
   parts.push(`overrideGrants=${state.overrideGrantsUsed}/${overrideBudget}`);
